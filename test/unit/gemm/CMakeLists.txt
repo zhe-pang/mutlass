@@ -1,3 +1,4 @@
+# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -26,26 +27,17 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-add_subdirectory(thread)
-add_subdirectory(warp)
-add_subdirectory(threadblock)
+
 add_subdirectory(device)
 
 add_custom_target(
-  cutlass_test_unit_gemm
+  mutlass_test_unit_gemm
   DEPENDS
-  cutlass_test_unit_gemm_thread
-  cutlass_test_unit_gemm_warp
-  cutlass_test_unit_gemm_threadblock
-  cutlass_test_unit_gemm_device
+  mutlass_test_unit_gemm_device
   )
 
 add_custom_target(
   test_unit_gemm
   DEPENDS
-  test_unit_gemm_thread
-  test_unit_gemm_warp
-  test_unit_gemm_threadblock
   test_unit_gemm_device
   )
-

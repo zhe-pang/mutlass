@@ -1,6 +1,7 @@
 #################################################################################################
 #
-# Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
 # Redistribution and use in source and binary forms, with or without
@@ -35,10 +36,10 @@ from setuptools import setup
 
 def perform_setup():
     setup(
-        name='cutlass_library',
-        version='3.5.0',
-        description='CUTLASS library generation scripts',
-        packages=['cutlass_library']
+        name='mutlass_library',
+        version='0.1.0',
+        description='MUTLASS library generation scripts',
+        packages=['mutlass_library']
     )
 
 

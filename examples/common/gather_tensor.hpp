@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -30,13 +31,13 @@
  **************************************************************************************************/
 #pragma once
 
-#include "cute/layout.hpp"
-#include "cute/tensor.hpp"
-#include "cute/util/print.hpp"
+#include "mute/layout.hpp"
+#include "mute/tensor.hpp"
+#include "mute/util/print.hpp"
 
 namespace example {
 
-using namespace cute;
+using namespace mute;
 
 // Empty type used to disable gather/scatter for a GEMM argument
 struct NoGather
@@ -49,18 +50,18 @@ struct NoGather
 template <class Index>
 struct IndexedGather
 {
-  CUTE_HOST_DEVICE constexpr
+  MUTE_HOST_DEVICE constexpr
   IndexedGather(Index const *indices = {}): indices_(indices) {}
 
   template <typename I>
-  CUTE_HOST_DEVICE constexpr
+  MUTE_HOST_DEVICE constexpr
   Index
   operator()(I i) const { return indices_[i]; }
 
-  CUTE_HOST_DEVICE friend
-  void 
+  MUTE_HOST_DEVICE friend
+  void
   print(IndexedGather const &s) {
-    cute::print("Indexed");
+    mute::print("Indexed");
   }
 
   Index const *indices_;
@@ -71,20 +72,20 @@ struct IndexedGather
 template <class Stride>
 struct StridedGather
 {
-  CUTE_HOST_DEVICE constexpr
+  MUTE_HOST_DEVICE constexpr
   StridedGather(Stride stride = {}): stride_(stride) {}
 
   template <class I>
-  CUTE_HOST_DEVICE constexpr
+  MUTE_HOST_DEVICE constexpr
   auto
   operator()(I i) const { return i * stride_; }
 
-  CUTE_HOST_DEVICE friend
-  void 
+  MUTE_HOST_DEVICE friend
+  void
   print(StridedGather const &s) {
-    cute::print("Strided{");
+    mute::print("Strided{");
     print(s.stride_);
-    cute::print("}");
+    mute::print("}");
   }
 
   Stride stride_;
@@ -94,31 +95,31 @@ struct StridedGather
 template <class Func, class Stride>
 struct CustomStride
 {
-  CUTE_HOST_DEVICE constexpr
+  MUTE_HOST_DEVICE constexpr
   CustomStride(Func const &func, Stride const &stride): func_(func), stride_(stride) {}
 
   template <class I>
-  CUTE_HOST_DEVICE constexpr friend
+  MUTE_HOST_DEVICE constexpr friend
   auto
   operator*(I i, CustomStride const &s) { return s.func_(i) * s.stride_; }
 
   template <class I>
-  CUTE_HOST_DEVICE constexpr friend
+  MUTE_HOST_DEVICE constexpr friend
   auto
   operator*(CustomStride const &s, I i) { return s.func_(i) * s.stride_; }
 
-  CUTE_HOST_DEVICE friend
+  MUTE_HOST_DEVICE friend
   void
   print(CustomStride const & s) {
-    cute::print("Custom{");
+    mute::print("Custom{");
     print(s.func_);
-    cute::print(",");
+    mute::print(",");
     print(s.stride_);
-    cute::print("}");
+    mute::print("}");
   }
 
   template<class Div>
-  CUTE_HOST_DEVICE constexpr friend
+  MUTE_HOST_DEVICE constexpr friend
   auto
   safe_div(CustomStride const &s, Div const &div)
   {
@@ -127,7 +128,7 @@ struct CustomStride
 
   // Circumvent the requirement on make_layout that shape and stride are integral
   template <class Shape>
-  CUTE_HOST_DEVICE constexpr friend
+  MUTE_HOST_DEVICE constexpr friend
   auto
   make_layout(Shape const &shape, CustomStride const &stride)
   {
@@ -139,7 +140,7 @@ struct CustomStride
 };
 
 template<class Stride, class Func>
-CUTLASS_HOST_DEVICE
+MUTLASS_HOST_DEVICE
 auto
 make_custom_stride_layout(Stride const &stride, Func&& func)
 {
@@ -152,11 +153,11 @@ make_custom_stride_layout(Stride const &stride, Func&& func)
 
 /// Helper function to optionally create a gather tensor
 template<class Iterator, class Shape, class Stride, class Func>
-CUTLASS_HOST_DEVICE
-auto 
+MUTLASS_HOST_DEVICE
+auto
 make_gather_tensor(Iterator iter, Shape const &shape, Stride const &stride, Func &&func)
 {
-  if constexpr (not cutlass::platform::is_same<remove_cvref_t<Func>, NoGather>::value) {
+  if constexpr (not mutlass::platform::is_same<remove_cvref_t<Func>, NoGather>::value) {
     Layout matrix_layout = make_identity_layout(shape);
     auto offset = as_arithmetic_tuple(repeat_like(shape, _0{}));
     Layout gather_layout = make_custom_stride_layout(stride, static_cast<Func&&>(func));
@@ -168,11 +169,11 @@ make_gather_tensor(Iterator iter, Shape const &shape, Stride const &stride, Func
 
 } // namespace example
 
-namespace cute
+namespace mute
 {
 
 template<int N, int I, class Shape, class Stride>
-CUTE_HOST_DEVICE constexpr
+MUTE_HOST_DEVICE constexpr
 auto
 upcast(Shape const& shape, Stride const& stride)
 {
@@ -188,11 +189,11 @@ upcast(Shape const& shape, Stride const& stride)
     return upcast<N>(shape, stride);
   }
 
-  CUTE_GCC_UNREACHABLE;
+  MUTE_GCC_UNREACHABLE;
 }
 
 template <int N, class OuterShape, class OuterStride, class Offset, class Shape, class Stride>
-CUTE_HOST_DEVICE constexpr
+MUTE_HOST_DEVICE constexpr
 auto
 upcast(ComposedLayout<Layout<OuterShape,OuterStride>,Offset,Layout<Shape,Stride>> const& layout)
 {

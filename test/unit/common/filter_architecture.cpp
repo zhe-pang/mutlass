@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -29,43 +30,43 @@
  *
  **************************************************************************************************/
 
-#include <cuda_runtime_api.h>
+#include <musa_runtime_api.h>
 
-#include "cutlass_unit_test.h"
+#include "mutlass_unit_test.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Gets a CUDA device
-cudaDeviceProp GetCudaDevice() {
+/// Gets a MUSA device
+musaDeviceProp GetMusaDevice() {
 
-  cudaError_t err;
+  musaError_t err;
 
-  int cudaDeviceId;
-  err = cudaGetDevice(&cudaDeviceId);
-  if (cudaSuccess != err) {
+  int musaDeviceId;
+  err = musaGetDevice(&musaDeviceId);
+  if (musaSuccess != err) {
     std::cerr << "*** Error: Could not detect active GPU device ID"
-              << " [" << cudaGetErrorString(err) << "]" << std::endl;
+              << " [" << musaGetErrorString(err) << "]" << std::endl;
     exit(1);
   }
 
-  cudaDeviceProp deviceProperties;
-  err = cudaGetDeviceProperties(&deviceProperties, cudaDeviceId);
+  musaDeviceProp deviceProperties;
+  err = musaGetDeviceProperties(&deviceProperties, musaDeviceId);
 
   return deviceProperties;
 }
 
 /// Prints device properties
-std::ostream &operator<<(std::ostream &out, cudaDeviceProp const &deviceProperties) {
+std::ostream &operator<<(std::ostream &out, musaDeviceProp const &deviceProperties) {
 
   int deviceMajorMinor = deviceProperties.major * 10 + deviceProperties.minor;
   if (deviceMajorMinor) {
     int32_t clock_MHz = deviceProperties.clockRate / 1000;
     out << "GPU(compute_"
       << deviceMajorMinor << ", "
-      << deviceProperties.multiProcessorCount << " SMs @ " << clock_MHz << " MHz)";
+      << deviceProperties.multiProcessorCount << " MPs @ " << clock_MHz << " MHz)";
   }
   else {
-    out << "No CUDA device.";
+    out << "No MUSA device.";
   }
 
   return out;
@@ -75,24 +76,23 @@ std::ostream &operator<<(std::ostream &out, cudaDeviceProp const &deviceProperti
 /// Sets flags for Unit test
 void FilterArchitecture() {
   // Default flags can be overwritten by --gtest_filter from commandline
-
   int const kMaxDevice = 999;
 
-  cudaError_t err;
+  musaError_t err;
 
-  int cudaDeviceId;
-  err = cudaGetDevice(&cudaDeviceId);
-  if (cudaSuccess != err) {
+  int musaDeviceId;
+  err = musaGetDevice(&musaDeviceId);
+  if (musaSuccess != err) {
     std::cerr << "*** Error: Could not detect active GPU device ID"
-              << " [" << cudaGetErrorString(err) << "]" << std::endl;
+              << " [" << musaGetErrorString(err) << "]" << std::endl;
     exit(1);
   }
 
-  cudaDeviceProp deviceProperties;
-  err = cudaGetDeviceProperties(&deviceProperties, cudaDeviceId);
-  if (cudaSuccess != err) {
-    std::cerr << "*** Error: Could not get device properties for GPU " << cudaDeviceId << " ["
-              << cudaGetErrorString(err) << "]" << std::endl;
+  musaDeviceProp deviceProperties;
+  err = musaGetDeviceProperties(&deviceProperties, musaDeviceId);
+  if (musaSuccess != err) {
+    std::cerr << "*** Error: Could not get device properties for GPU " << musaDeviceId << " ["
+              << musaGetErrorString(err) << "]" << std::endl;
     exit(1);
   }
 
@@ -109,19 +109,11 @@ void FilterArchitecture() {
 
     /// Maximum compute capability for which the kernels are enabled 
     int max_compute_capability;
-  } 
+  }
   test_filters[] = {
-    { "SM50*",                      50, kMaxDevice},
-    { "SM60*",                      60, kMaxDevice},
-    { "SM61*",                      61, kMaxDevice},
-    { "SM70*",                      70, 75},
-    { "SM75*",                      75, kMaxDevice},
-    { "SM80*",                      80, kMaxDevice},
-    { "SM89*",                      89, 89},
-    { "SM90*",                      90, 90},
-    { 0, 0, false }
+    { "MP22*",                      22, kMaxDevice},
+    {0, 0, false}
   };
-
 
   // Set negative test filters
   std::stringstream ss;
@@ -134,14 +126,13 @@ void FilterArchitecture() {
       ss << (j++ ? ":" : "") << test_filters[i].filter;
     }
   }
-
   ::testing::GTEST_FLAG(filter) = ss.str();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-int CutlassUnitTestProblemCount() {
-    if(const char* problem_count = std::getenv("CUTLASS_UNIT_TEST_PROBLEM_COUNT")) {
+int MutlassUnitTestProblemCount() {
+    if(const char* problem_count = std::getenv("MUTLASS_UNIT_TEST_PROBLEM_COUNT")) {
 
         return std::stoi(problem_count);
     } 

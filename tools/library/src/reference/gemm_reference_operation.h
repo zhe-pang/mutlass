@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -29,7 +30,7 @@
  *
  **************************************************************************************************/
 /* \file
-  \brief Defines reference operations for GEMM operation kinds in CUTLASS Library
+  \brief Defines reference operations for GEMM operation kinds in MUTLASS Library
 */
 
 #pragma once
@@ -38,19 +39,19 @@
 #include <sstream>
 #include <cstring>
 
-#include "cutlass/cutlass.h"
+#include "mutlass/mutlass.h"
 
-#include "cutlass/library/library.h"
-#include "cutlass/library/manifest.h"
-#include "cutlass/library/util.h"
+#include "mutlass/library/library.h"
+#include "mutlass/library/manifest.h"
+#include "mutlass/library/util.h"
 #include "library_internal.h"
 
-#include "cutlass/util/reference/host/gemm_complex.h"
-#include "cutlass/util/reference/device/gemm_complex.h"
+#include "mutlass/util/reference/host/gemm_complex.h"
+#include "mutlass/util/reference/device/gemm_complex.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-namespace cutlass {
+namespace mutlass {
 namespace library {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,10 +60,10 @@ template <
   Provider Provider_,
   typename ElementA_,
   typename LayoutA_,
-  cutlass::ComplexTransform TransformA,
+  mutlass::ComplexTransform TransformA,
   typename ElementB_,
   typename LayoutB_,
-  cutlass::ComplexTransform TransformB,
+  mutlass::ComplexTransform TransformB,
   typename ElementC_,
   typename LayoutC_,
   typename ElementCompute_,
@@ -78,11 +79,11 @@ public:
   using ElementA = ElementA_;
   using LayoutA = LayoutA_;
   using TensorRefA = TensorRef<ElementA, LayoutA>;
-  static cutlass::ComplexTransform const kTransformA = TransformA;
+  static mutlass::ComplexTransform const kTransformA = TransformA;
   using ElementB = ElementB_;
   using LayoutB = LayoutB_;
   using TensorRefB = TensorRef<ElementB, LayoutB>;
-  static cutlass::ComplexTransform const kTransformB = TransformB;
+  static mutlass::ComplexTransform const kTransformB = TransformB;
   using ElementC = ElementC_;
   using LayoutC = LayoutC_;
   using ElementD = ElementD_;
@@ -127,7 +128,7 @@ public:
 
     // Compute capability for gemm reference
     description_.tile_description.minimum_compute_capability = 
-      (kProvider == Provider::kReferenceDevice ? 50 : 0);
+      (kProvider == Provider::kReferenceDevice ? 10 : 0);
 
     description_.tile_description.maximum_compute_capability = 1024;
 
@@ -181,7 +182,7 @@ public:
     void const *configuration,
     void *host_workspace,
     void *device_workspace = nullptr,
-    cudaStream_t stream = nullptr) const {
+    musaStream_t stream = nullptr) const {
 
     std::memcpy(host_workspace, configuration, get_host_workspace_size(configuration));
 
@@ -192,7 +193,7 @@ public:
     void const *arguments,
     void *host_workspace,
     void *device_workspace = nullptr,
-    cudaStream_t stream = nullptr) const {
+    musaStream_t stream = nullptr) const {
 
     GemmUniversalConfiguration const &config = *static_cast<GemmUniversalConfiguration const *>(host_workspace);
     GemmUniversalArguments const &args = *static_cast<GemmUniversalArguments const *>(arguments);
@@ -204,7 +205,7 @@ public:
 
     if (kProvider == Provider::kReferenceHost) {
 
-      cutlass::reference::host::GemmComplex<
+      mutlass::reference::host::GemmComplex<
         ElementA,
         LayoutA,
         ElementB,
@@ -238,7 +239,7 @@ public:
     }
     else if (kProvider == Provider::kReferenceDevice) {
 
-      cutlass::reference::device::GemmComplex<
+      mutlass::reference::device::GemmComplex<
         ElementA,
         LayoutA,
         ElementB,
@@ -280,10 +281,10 @@ public:
 template <
   typename ElementA_,
   typename LayoutA_,
-  cutlass::ComplexTransform TransformA,
+  mutlass::ComplexTransform TransformA,
   typename ElementB_,
   typename LayoutB_,
-  cutlass::ComplexTransform TransformB,
+  mutlass::ComplexTransform TransformB,
   typename ElementC_,
   typename LayoutC_,
   typename ElementCompute_,
@@ -321,8 +322,8 @@ void make_gemm(Manifest &manifest) {
 
 /// Helper to create NN, NT, TN, and TT GEMM layouts.
 template <
-  typename ElementA_, cutlass::ComplexTransform TransformA,
-  typename ElementB_, cutlass::ComplexTransform TransformB,
+  typename ElementA_, mutlass::ComplexTransform TransformA,
+  typename ElementB_, mutlass::ComplexTransform TransformB,
   typename ElementC_,
   typename ElementCompute_,
   typename ElementAccumulator_ = ElementCompute_,
@@ -334,9 +335,9 @@ void make_gemm_canonical_layouts(Manifest &manifest) {
 
   // M Major outputs
   make_gemm<
-    ElementA_, cutlass::layout::ColumnMajor, TransformA,
-    ElementB_, cutlass::layout::ColumnMajor, TransformB,
-    ElementC_, cutlass::layout::ColumnMajor,
+    ElementA_, mutlass::layout::ColumnMajor, TransformA,
+    ElementB_, mutlass::layout::ColumnMajor, TransformB,
+    ElementC_, mutlass::layout::ColumnMajor,
     ElementCompute_,
     ElementAccumulator_,
     ElementD_,
@@ -345,9 +346,9 @@ void make_gemm_canonical_layouts(Manifest &manifest) {
   >(manifest);
 
   make_gemm<
-    ElementA_, cutlass::layout::ColumnMajor, TransformA,
-    ElementB_, cutlass::layout::RowMajor, TransformB,
-    ElementC_, cutlass::layout::ColumnMajor,
+    ElementA_, mutlass::layout::ColumnMajor, TransformA,
+    ElementB_, mutlass::layout::RowMajor, TransformB,
+    ElementC_, mutlass::layout::ColumnMajor,
     ElementCompute_,
     ElementAccumulator_,
     ElementD_,
@@ -356,9 +357,9 @@ void make_gemm_canonical_layouts(Manifest &manifest) {
   >(manifest);
 
   make_gemm<
-    ElementA_, cutlass::layout::RowMajor, TransformA,
-    ElementB_, cutlass::layout::ColumnMajor, TransformB,
-    ElementC_, cutlass::layout::ColumnMajor,
+    ElementA_, mutlass::layout::RowMajor, TransformA,
+    ElementB_, mutlass::layout::ColumnMajor, TransformB,
+    ElementC_, mutlass::layout::ColumnMajor,
     ElementCompute_,
     ElementAccumulator_,
     ElementD_,
@@ -367,9 +368,9 @@ void make_gemm_canonical_layouts(Manifest &manifest) {
   >(manifest);
   
   make_gemm<
-    ElementA_, cutlass::layout::RowMajor, TransformA,
-    ElementB_, cutlass::layout::RowMajor, TransformB,
-    ElementC_, cutlass::layout::ColumnMajor,
+    ElementA_, mutlass::layout::RowMajor, TransformA,
+    ElementB_, mutlass::layout::RowMajor, TransformB,
+    ElementC_, mutlass::layout::ColumnMajor,
     ElementCompute_,
     ElementAccumulator_,
     ElementD_,
@@ -379,9 +380,9 @@ void make_gemm_canonical_layouts(Manifest &manifest) {
 
   // N Major outputs
   make_gemm<
-    ElementA_, cutlass::layout::ColumnMajor, TransformA,
-    ElementB_, cutlass::layout::ColumnMajor, TransformB,
-    ElementC_, cutlass::layout::RowMajor,
+    ElementA_, mutlass::layout::ColumnMajor, TransformA,
+    ElementB_, mutlass::layout::ColumnMajor, TransformB,
+    ElementC_, mutlass::layout::RowMajor,
     ElementCompute_,
     ElementAccumulator_,
     ElementD_,
@@ -390,9 +391,9 @@ void make_gemm_canonical_layouts(Manifest &manifest) {
   >(manifest);
 
   make_gemm<
-    ElementA_, cutlass::layout::ColumnMajor, TransformA,
-    ElementB_, cutlass::layout::RowMajor, TransformB,
-    ElementC_, cutlass::layout::RowMajor,
+    ElementA_, mutlass::layout::ColumnMajor, TransformA,
+    ElementB_, mutlass::layout::RowMajor, TransformB,
+    ElementC_, mutlass::layout::RowMajor,
     ElementCompute_,
     ElementAccumulator_,
     ElementD_,
@@ -401,9 +402,9 @@ void make_gemm_canonical_layouts(Manifest &manifest) {
   >(manifest);
 
   make_gemm<
-    ElementA_, cutlass::layout::RowMajor, TransformA,
-    ElementB_, cutlass::layout::ColumnMajor, TransformB,
-    ElementC_, cutlass::layout::RowMajor,
+    ElementA_, mutlass::layout::RowMajor, TransformA,
+    ElementB_, mutlass::layout::ColumnMajor, TransformB,
+    ElementC_, mutlass::layout::RowMajor,
     ElementCompute_,
     ElementAccumulator_,
     ElementD_,
@@ -412,9 +413,9 @@ void make_gemm_canonical_layouts(Manifest &manifest) {
   >(manifest);
 
   make_gemm<
-    ElementA_, cutlass::layout::RowMajor, TransformA,
-    ElementB_, cutlass::layout::RowMajor, TransformB,
-    ElementC_, cutlass::layout::RowMajor,
+    ElementA_, mutlass::layout::RowMajor, TransformA,
+    ElementB_, mutlass::layout::RowMajor, TransformB,
+    ElementC_, mutlass::layout::RowMajor,
     ElementCompute_,
     ElementAccumulator_,
     ElementD_,
@@ -439,9 +440,9 @@ template <
 void make_gemm_interleaved_layouts(Manifest &manifest) {
   
   make_gemm<
-    ElementA_, cutlass::layout::RowMajor, cutlass::ComplexTransform::kNone,
-    ElementB_, cutlass::layout::ColumnMajor, cutlass::ComplexTransform::kNone,
-    ElementC_, cutlass::layout::ColumnMajor,
+    ElementA_, mutlass::layout::RowMajor, mutlass::ComplexTransform::kNone,
+    ElementB_, mutlass::layout::ColumnMajor, mutlass::ComplexTransform::kNone,
+    ElementC_, mutlass::layout::ColumnMajor,
     ElementCompute_,
     ElementAccumulator_,
     ElementD_,
@@ -464,8 +465,8 @@ template <
 >
 void make_gemm_real_canonical_layouts(Manifest &manifest) {
   make_gemm_canonical_layouts<
-    ElementA_, cutlass::ComplexTransform::kNone,
-    ElementB_, cutlass::ComplexTransform::kNone,
+    ElementA_, mutlass::ComplexTransform::kNone,
+    ElementB_, mutlass::ComplexTransform::kNone,
     ElementC_,
     ElementCompute_,
     ElementAccumulator_,
@@ -489,8 +490,8 @@ template <
 void make_gemm_complex_canonical_layouts(Manifest &manifest) {
 
   make_gemm_canonical_layouts<
-    ElementA_, cutlass::ComplexTransform::kNone,
-    ElementB_, cutlass::ComplexTransform::kNone,
+    ElementA_, mutlass::ComplexTransform::kNone,
+    ElementB_, mutlass::ComplexTransform::kNone,
     ElementC_,
     ElementCompute_,
     ElementAccumulator_,
@@ -500,8 +501,8 @@ void make_gemm_complex_canonical_layouts(Manifest &manifest) {
   >(manifest);
   
   make_gemm_canonical_layouts<
-    ElementA_, cutlass::ComplexTransform::kConjugate,
-    ElementB_, cutlass::ComplexTransform::kConjugate,
+    ElementA_, mutlass::ComplexTransform::kConjugate,
+    ElementB_, mutlass::ComplexTransform::kConjugate,
     ElementC_,
     ElementCompute_,
     ElementAccumulator_,
@@ -511,8 +512,8 @@ void make_gemm_complex_canonical_layouts(Manifest &manifest) {
   >(manifest);
 
   make_gemm_canonical_layouts<
-    ElementA_, cutlass::ComplexTransform::kNone,
-    ElementB_, cutlass::ComplexTransform::kConjugate,
+    ElementA_, mutlass::ComplexTransform::kNone,
+    ElementB_, mutlass::ComplexTransform::kConjugate,
     ElementC_,
     ElementCompute_,
     ElementAccumulator_,
@@ -522,8 +523,8 @@ void make_gemm_complex_canonical_layouts(Manifest &manifest) {
   >(manifest);
   
   make_gemm_canonical_layouts<
-    ElementA_, cutlass::ComplexTransform::kConjugate,
-    ElementB_, cutlass::ComplexTransform::kNone,
+    ElementA_, mutlass::ComplexTransform::kConjugate,
+    ElementB_, mutlass::ComplexTransform::kNone,
     ElementC_,
     ElementCompute_,
     ElementAccumulator_,
@@ -536,7 +537,7 @@ void make_gemm_complex_canonical_layouts(Manifest &manifest) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 } // namespace library
-} // namespace cutlass
+} // namespace mutlass
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 

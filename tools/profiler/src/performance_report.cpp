@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -38,13 +39,13 @@
 #include <algorithm>
 #include <cstring>
 
-#include "cutlass/library/util.h"
+#include "mutlass/library/util.h"
 
-#include "cutlass/library/util.h"
+#include "mutlass/library/util.h"
 
-#include "cutlass/profiler/performance_report.h"
-#include "cutlass/profiler/debug.h"
-namespace cutlass {
+#include "mutlass/profiler/performance_report.h"
+#include "mutlass/profiler/debug.h"
+namespace mutlass {
 namespace profiler {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -396,7 +397,7 @@ std::ostream & PerformanceReport::print_result_csv_(
 std::ostream & PerformanceReport::print_junit_header_(std::ostream &out) {
 
   out << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl;
-  out << "<testsuite name=\"cutlass_profiler\">" << std::endl;
+  out << "<testsuite name=\"mutlass_profiler\">" << std::endl;
   return out;
 
 }
@@ -502,4 +503,4 @@ std::ostream & PerformanceReport::print_junit_footer_(std::ostream &out) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 } // namespace profiler
-} // namespace cutlass
+} // namespace mutlass

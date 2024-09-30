@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,7 +32,7 @@
 /*! 
   \file
 
-  \brief CUTLASS Library is an object-oriented approach to managing operations implemented by CUTLASS.
+  \brief MUTLASS Library is an object-oriented approach to managing operations implemented by MUTLASS.
 
   Generally,
     
@@ -45,19 +46,19 @@
 
 #pragma once
 
-#include "cutlass/cutlass.h"
-#include "cutlass/complex.h"
-#include "cutlass/numeric_types.h"
-#include "cutlass/arch/arch.h"
-#include "cutlass/arch/mma.h"
-#include "cutlass/layout/matrix.h"
+#include "mutlass/mutlass.h"
+#include "mutlass/complex.h"
+#include "mutlass/numeric_types.h"
+#include "mutlass/arch/arch.h"
+#include "mutlass/arch/mma.h"
+#include "mutlass/layout/matrix.h"
 
-#include "cutlass/library/library.h"
-#include "cutlass/library/arch_mappings.h"
+#include "mutlass/library/library.h"
+#include "mutlass/library/arch_mappings.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-namespace cutlass {
+namespace mutlass {
 namespace library {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -68,11 +69,11 @@ template <> struct NumericTypeMap<void> {
   static NumericTypeID const kId = NumericTypeID::kVoid;
 };
 
-template <> struct NumericTypeMap<cutlass::uint1b_t> {
+template <> struct NumericTypeMap<mutlass::uint1b_t> {
   static NumericTypeID const kId = NumericTypeID::kB1;
 };
 
-template <> struct NumericTypeMap<cutlass::int4b_t> {
+template <> struct NumericTypeMap<mutlass::int4b_t> {
   static NumericTypeID const kId = NumericTypeID::kS4;
 };
 
@@ -92,7 +93,7 @@ template <> struct NumericTypeMap<int64_t> {
   static NumericTypeID const kId = NumericTypeID::kS64;
 };
 
-template <> struct NumericTypeMap<cutlass::uint4b_t> {
+template <> struct NumericTypeMap<mutlass::uint4b_t> {
   static NumericTypeID const kId = NumericTypeID::kU4;
 };
 
@@ -100,11 +101,11 @@ template <> struct NumericTypeMap<uint8_t> {
   static NumericTypeID const kId = NumericTypeID::kU8;
 };
 
-template <> struct NumericTypeMap<cutlass::float_e4m3_t> {
+template <> struct NumericTypeMap<mutlass::float_e4m3_t> {
   static NumericTypeID const kId = NumericTypeID::kFE4M3;
 };
 
-template <> struct NumericTypeMap<cutlass::float_e5m2_t> {
+template <> struct NumericTypeMap<mutlass::float_e5m2_t> {
   static NumericTypeID const kId = NumericTypeID::kFE5M2;
 };
 
@@ -120,7 +121,7 @@ template <> struct NumericTypeMap<uint64_t> {
   static NumericTypeID const kId = NumericTypeID::kU64;
 };
 
-template <> struct NumericTypeMap<cutlass::half_t> {
+template <> struct NumericTypeMap<mutlass::half_t> {
   static NumericTypeID const kId = NumericTypeID::kF16;
 };
 
@@ -132,26 +133,25 @@ template <> struct NumericTypeMap<double> {
   static NumericTypeID const kId = NumericTypeID::kF64;
 };
 
-template <> struct NumericTypeMap<cutlass::complex<cutlass::half_t> > {
+template <> struct NumericTypeMap<mutlass::complex<mutlass::half_t> > {
   static NumericTypeID const kId = NumericTypeID::kCF16;
 };
 
-template <> struct NumericTypeMap<cutlass::complex<float> > {
+template <> struct NumericTypeMap<mutlass::complex<float> > {
   static NumericTypeID const kId = NumericTypeID::kCF32;
 };
 
-template <> struct NumericTypeMap<cutlass::complex<double> > {
+template <> struct NumericTypeMap<mutlass::complex<double> > {
   static NumericTypeID const kId = NumericTypeID::kCF64;
 };
 
-template <> struct NumericTypeMap<cutlass::bfloat16_t> {
+template <> struct NumericTypeMap<mutlass::bfloat16_t> {
   static NumericTypeID const kId = NumericTypeID::kBF16;
 };
 
-template <> struct NumericTypeMap<cutlass::tfloat32_t> {
+template <> struct NumericTypeMap<mutlass::tfloat32_t> {
   static NumericTypeID const kId = NumericTypeID::kTF32;
 };
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -159,44 +159,44 @@ template <typename T> struct MathOperationMap {
   static MathOperationID const kId = MathOperationID::kInvalid;
 };
 
-template <> struct MathOperationMap<cutlass::arch::OpMultiplyAdd> {
+template <> struct MathOperationMap<mutlass::arch::OpMultiplyAdd> {
   static MathOperationID const kId = MathOperationID::kMultiplyAdd;
 };
 
-template <> struct MathOperationMap<cutlass::arch::OpMultiplyAddFastBF16> {
+template <> struct MathOperationMap<mutlass::arch::OpMultiplyAddFastBF16> {
   static MathOperationID const kId = MathOperationID::kMultiplyAddFastBF16;
 };
 
-template <> struct MathOperationMap<cutlass::arch::OpMultiplyAddFastF16> {
+template <> struct MathOperationMap<mutlass::arch::OpMultiplyAddFastF16> {
   static MathOperationID const kId = MathOperationID::kMultiplyAddFastF16;
 };
 
-template <> struct MathOperationMap<cutlass::arch::OpMultiplyAddSaturate> {
+template <> struct MathOperationMap<mutlass::arch::OpMultiplyAddSaturate> {
   static MathOperationID const kId = MathOperationID::kMultiplyAddSaturate;
 };
 
-template <> struct MathOperationMap<cutlass::arch::OpMultiplyAddMixedInputUpcast> {
+template <> struct MathOperationMap<mutlass::arch::OpMultiplyAddMixedInputUpcast> {
   static MathOperationID const kId = MathOperationID::kMultiplyAddMixedInputUpcast;
 };
 
-template <> struct MathOperationMap<cutlass::arch::OpMultiplyAddComplex> {
+template <> struct MathOperationMap<mutlass::arch::OpMultiplyAddComplex> {
   static MathOperationID const kId = MathOperationID::kMultiplyAddComplex;
 };
 
-template <> struct MathOperationMap<cutlass::arch::OpMultiplyAddGaussianComplex> {
+template <> struct MathOperationMap<mutlass::arch::OpMultiplyAddGaussianComplex> {
   static MathOperationID const kId = MathOperationID::kMultiplyAddGaussianComplex;
 };
 
-template <> struct MathOperationMap<cutlass::arch::OpXorPopc> {
+template <> struct MathOperationMap<mutlass::arch::OpXorPopc> {
   static MathOperationID const kId = MathOperationID::kXorPopc;
 };
 
 
-template <> struct MathOperationMap<cutlass::arch::OpMultiplyAddFastF32> {
+template <> struct MathOperationMap<mutlass::arch::OpMultiplyAddFastF32> {
   static MathOperationID const kId = MathOperationID::kMultiplyAddFastF32;
 };
 
-template <> struct MathOperationMap<cutlass::arch::OpMultiplyAddComplexFastF32> {
+template <> struct MathOperationMap<mutlass::arch::OpMultiplyAddComplexFastF32> {
   static MathOperationID const kId = MathOperationID::kMultiplyAddComplexFastF32;
 };
 
@@ -204,75 +204,75 @@ template <> struct MathOperationMap<cutlass::arch::OpMultiplyAddComplexFastF32> 
 
 template <typename T> struct LayoutMap;
 
-template <> struct LayoutMap<cutlass::layout::ColumnMajor> {
+template <> struct LayoutMap<mutlass::layout::ColumnMajor> {
   static LayoutTypeID const kId = LayoutTypeID::kColumnMajor;
 };
 
-template <> struct LayoutMap<cutlass::layout::RowMajor> {
+template <> struct LayoutMap<mutlass::layout::RowMajor> {
   static LayoutTypeID const kId = LayoutTypeID::kRowMajor;
 };
 
-template <> struct LayoutMap<cutlass::layout::ColumnMajorInterleaved<2>> {
+template <> struct LayoutMap<mutlass::layout::ColumnMajorInterleaved<2>> {
   static LayoutTypeID const kId = LayoutTypeID::kColumnMajorInterleavedK2;
 };
 
-template <> struct LayoutMap<cutlass::layout::RowMajorInterleaved<2>> {
+template <> struct LayoutMap<mutlass::layout::RowMajorInterleaved<2>> {
   static LayoutTypeID const kId = LayoutTypeID::kRowMajorInterleavedK2;
 };
 
-template <> struct LayoutMap<cutlass::layout::ColumnMajorInterleaved<4>> {
+template <> struct LayoutMap<mutlass::layout::ColumnMajorInterleaved<4>> {
   static LayoutTypeID const kId = LayoutTypeID::kColumnMajorInterleavedK4;
 };
 
-template <> struct LayoutMap<cutlass::layout::RowMajorInterleaved<4>> {
+template <> struct LayoutMap<mutlass::layout::RowMajorInterleaved<4>> {
   static LayoutTypeID const kId = LayoutTypeID::kRowMajorInterleavedK4;
 };
 
-template <> struct LayoutMap<cutlass::layout::ColumnMajorInterleaved<16>> {
+template <> struct LayoutMap<mutlass::layout::ColumnMajorInterleaved<16>> {
   static LayoutTypeID const kId = LayoutTypeID::kColumnMajorInterleavedK16;
 };
 
-template <> struct LayoutMap<cutlass::layout::RowMajorInterleaved<16>> {
+template <> struct LayoutMap<mutlass::layout::RowMajorInterleaved<16>> {
   static LayoutTypeID const kId = LayoutTypeID::kRowMajorInterleavedK16;
 };
 
-template <> struct LayoutMap<cutlass::layout::ColumnMajorInterleaved<32>> {
+template <> struct LayoutMap<mutlass::layout::ColumnMajorInterleaved<32>> {
   static LayoutTypeID const kId = LayoutTypeID::kColumnMajorInterleavedK32;
 };
 
-template <> struct LayoutMap<cutlass::layout::RowMajorInterleaved<32>> {
+template <> struct LayoutMap<mutlass::layout::RowMajorInterleaved<32>> {
   static LayoutTypeID const kId = LayoutTypeID::kRowMajorInterleavedK32;
 };
 
-template <> struct LayoutMap<cutlass::layout::ColumnMajorInterleaved<64>> {
+template <> struct LayoutMap<mutlass::layout::ColumnMajorInterleaved<64>> {
   static LayoutTypeID const kId = LayoutTypeID::kColumnMajorInterleavedK64;
 };
 
-template <> struct LayoutMap<cutlass::layout::RowMajorInterleaved<64>> {
+template <> struct LayoutMap<mutlass::layout::RowMajorInterleaved<64>> {
   static LayoutTypeID const kId = LayoutTypeID::kRowMajorInterleavedK64;
 };
 
-template <> struct LayoutMap<cutlass::layout::TensorNHWC> {
+template <> struct LayoutMap<mutlass::layout::TensorNHWC> {
   static LayoutTypeID const kId = LayoutTypeID::kTensorNHWC;
 };
 
-template <> struct LayoutMap<cutlass::layout::TensorNDHWC> {
+template <> struct LayoutMap<mutlass::layout::TensorNDHWC> {
   static LayoutTypeID const kId = LayoutTypeID::kTensorNDHWC;
 };
 
-template <> struct LayoutMap<cutlass::layout::TensorNCxHWx<32>> {
+template <> struct LayoutMap<mutlass::layout::TensorNCxHWx<32>> {
   static LayoutTypeID const kId = LayoutTypeID::kTensorNC32HW32;
 };
 
-template <> struct LayoutMap<cutlass::layout::TensorNCxHWx<64>> {
+template <> struct LayoutMap<mutlass::layout::TensorNCxHWx<64>> {
   static LayoutTypeID const kId = LayoutTypeID::kTensorNC64HW64;
 };
 
-template <> struct LayoutMap<cutlass::layout::TensorCxRSKx<32>> {
+template <> struct LayoutMap<mutlass::layout::TensorCxRSKx<32>> {
   static LayoutTypeID const kId = LayoutTypeID::kTensorC32RSK32;
 };
 
-template <> struct LayoutMap<cutlass::layout::TensorCxRSKx<64>> {
+template <> struct LayoutMap<mutlass::layout::TensorCxRSKx<64>> {
   static LayoutTypeID const kId = LayoutTypeID::kTensorC64RSK64;
 };
 
@@ -288,29 +288,21 @@ template <> struct OpcodeClassMap<arch::OpClassTensorOp> {
   static OpcodeClassID const kId = OpcodeClassID::kTensorOp;
 };
 
-template <> struct OpcodeClassMap<arch::OpClassSparseTensorOp> {
-  static OpcodeClassID const kId = OpcodeClassID::kSparseTensorOp;
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <mutlass::ComplexTransform Transform> struct ComplexTransformMap;
+
+template <> struct ComplexTransformMap<mutlass::ComplexTransform::kNone> {
+  static mutlass::library::ComplexTransform const kId = mutlass::library::ComplexTransform::kNone;
 };
 
-template <> struct OpcodeClassMap<arch::OpClassWmmaTensorOp> {
-  static OpcodeClassID const kId = OpcodeClassID::kWmmaTensorOp;
+template <> struct ComplexTransformMap<mutlass::ComplexTransform::kConjugate> {
+  static mutlass::library::ComplexTransform const kId = mutlass::library::ComplexTransform::kConjugate;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <cutlass::ComplexTransform Transform> struct ComplexTransformMap;
-
-template <> struct ComplexTransformMap<cutlass::ComplexTransform::kNone> {
-  static cutlass::library::ComplexTransform const kId = cutlass::library::ComplexTransform::kNone;
-};
-
-template <> struct ComplexTransformMap<cutlass::ComplexTransform::kConjugate> {
-  static cutlass::library::ComplexTransform const kId = cutlass::library::ComplexTransform::kConjugate;
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
-template <cutlass::conv::Mode  T> struct ConvModeMap;
+template <mutlass::conv::Mode  T> struct ConvModeMap;
 
 template <> struct ConvModeMap<conv::Mode::kCrossCorrelation> {
   static ConvModeID const kId = ConvModeID::kCrossCorrelation;
@@ -321,7 +313,7 @@ template <> struct ConvModeMap<conv::Mode::kConvolution> {
 };
 
 
-template <cutlass::conv::Operator  T> struct ConvKindMap;
+template <mutlass::conv::Operator  T> struct ConvKindMap;
 
 template <> struct ConvKindMap<conv::Operator::kFprop> {
   static ConvKind const kId = ConvKind::kFprop;
@@ -336,7 +328,7 @@ template <> struct ConvKindMap<conv::Operator::kWgrad> {
 };
 
 
-template <cutlass::conv::IteratorAlgorithm  T> struct IteratorAlgorithmMap;
+template <mutlass::conv::IteratorAlgorithm  T> struct IteratorAlgorithmMap;
 
 template <> struct IteratorAlgorithmMap<conv::IteratorAlgorithm::kAnalytic> {
   static IteratorAlgorithmID const kId = IteratorAlgorithmID::kAnalytic;
@@ -372,6 +364,6 @@ TensorDescription make_TensorDescription(int alignment = 1) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 } // namespace library
-} // namespace cutlass
+} // namespace mutlass
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

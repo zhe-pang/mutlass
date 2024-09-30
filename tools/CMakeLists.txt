@@ -1,3 +1,4 @@
+# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -26,21 +27,18 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cmake_policy(SET CMP0112 NEW)
-
 add_subdirectory(util)
 
-if (CUTLASS_ENABLE_LIBRARY)
+if (MUTLASS_ENABLE_LIBRARY)
   add_subdirectory(library)
 endif()
 
-if (CUTLASS_ENABLE_PROFILER)
-  if (NOT CUTLASS_ENABLE_LIBRARY)
-    message(SEND_ERROR "Build conflict: The CUTLASS profiler requires the CUTLASS library.")
-    message(SEND_ERROR "  CUTLASS_ENABLE_PROFILER = ${CUTLASS_ENABLE_PROFILER}")
-    message(SEND_ERROR "  CUTLASS_ENABLE_LIBRARY = ${CUTLASS_ENABLE_LIBRARY}")
+if (MUTLASS_ENABLE_PROFILER)
+  if (NOT MUTLASS_ENABLE_LIBRARY)
+    message(SEND_ERROR "Build conflict: The MUTLASS profiler requires the MUTLASS library.")
+    message(SEND_ERROR "  MUTLASS_ENABLE_PROFILER = ${MUTLASS_ENABLE_PROFILER}")
+    message(SEND_ERROR "  MUTLASS_ENABLE_LIBRARY = ${MUTLASS_ENABLE_LIBRARY}")
   else()
     add_subdirectory(profiler)
   endif()
 endif()
-

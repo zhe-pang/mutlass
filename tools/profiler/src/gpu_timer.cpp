@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -34,62 +35,62 @@
 
 #include <stdexcept>
 
-#include "cutlass/profiler/gpu_timer.h"
+#include "mutlass/profiler/gpu_timer.h"
 
-namespace cutlass {
+namespace mutlass {
 namespace profiler {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 GpuTimer::GpuTimer() {
-  cudaError_t result;
+  musaError_t result;
 
   for (auto & event : events) {
-    result = cudaEventCreate(&event);
-    if (result != cudaSuccess) {
-      throw std::runtime_error("Failed to create CUDA event");
+    result = musaEventCreate(&event);
+    if (result != musaSuccess) {
+      throw std::runtime_error("Failed to create MUSA event");
     }
   }
 }
 
 GpuTimer::~GpuTimer() {
   for (auto & event : events) {
-    cudaEventDestroy(event);
+    musaEventDestroy(event);
   }
 }
 
 /// Records a start event in the stream
-void GpuTimer::start(cudaStream_t stream) {
-  cudaError_t result = cudaEventRecord(events[0], stream);
-  if (result != cudaSuccess) {
+void GpuTimer::start(musaStream_t stream) {
+  musaError_t result = musaEventRecord(events[0], stream);
+  if (result != musaSuccess) {
     throw std::runtime_error("Failed to record start event.");
   }
 }
 
 /// Records a stop event in the stream
-void GpuTimer::stop(cudaStream_t stream) {
-cudaError_t result = cudaEventRecord(events[1], stream);
-  if (result != cudaSuccess) {
+void GpuTimer::stop(musaStream_t stream) {
+musaError_t result = musaEventRecord(events[1], stream);
+  if (result != musaSuccess) {
     throw std::runtime_error("Failed to record stop event.");
   }
 }
 
 /// Records a stop event in the stream and synchronizes on the stream
-void GpuTimer::stop_and_wait(cudaStream_t stream) {
+void GpuTimer::stop_and_wait(musaStream_t stream) {
 
   stop(stream);
 
-  cudaError_t result;
+  musaError_t result;
   if (stream) {
-    result = cudaStreamSynchronize(stream);
-    if (result != cudaSuccess) {
-      throw std::runtime_error("Failed to synchronize with non-null CUDA stream.");
+    result = musaStreamSynchronize(stream);
+    if (result != musaSuccess) {
+      throw std::runtime_error("Failed to synchronize with non-null MUSA stream.");
     }
   }
   else {
-    result = cudaDeviceSynchronize();
-    if (result != cudaSuccess) {
-      throw std::runtime_error("Failed to synchronize with CUDA device.");
+    result = musaDeviceSynchronize();
+    if (result != musaSuccess) {
+      throw std::runtime_error("Failed to synchronize with MUSA device.");
     }
   }
 }
@@ -99,9 +100,9 @@ double GpuTimer::duration(int iterations) const {
 
   float avg_ms;
 
-  cudaError_t result = cudaEventElapsedTime(&avg_ms, events[0], events[1]);
-  if (result != cudaSuccess) {
-    throw std::runtime_error("Failed to query elapsed time from CUDA events.");
+  musaError_t result = musaEventElapsedTime(&avg_ms, events[0], events[1]);
+  if (result != musaSuccess) {
+    throw std::runtime_error("Failed to query elapsed time from MUSA events.");
   }
 
   return double(avg_ms) / double(iterations);
@@ -110,4 +111,4 @@ double GpuTimer::duration(int iterations) const {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 } // namespace profiler
-} // namespace cutlass
+} // namespace mutlass

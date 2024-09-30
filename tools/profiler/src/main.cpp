@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -34,18 +35,18 @@
 
 #include <iostream>
 
-#include "cutlass/profiler/options.h"
+#include "mutlass/profiler/options.h"
 
-#include "cutlass/profiler/cutlass_profiler.h"
+#include "mutlass/profiler/mutlass_profiler.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char const *arg[]) {
 
-  cutlass::CommandLine cmdline(argc, arg);
-  cutlass::profiler::Options options(cmdline);
+  mutlass::CommandLine cmdline(argc, arg);
+  mutlass::profiler::Options options(cmdline);
 
-  cutlass::profiler::CutlassProfiler profiler(options);
+  mutlass::profiler::MutlassProfiler profiler(options);
 
   return profiler();
 }

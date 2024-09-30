@@ -1,3 +1,4 @@
+# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -29,51 +30,41 @@
 find_package(Python3 3.5 COMPONENTS Interpreter REQUIRED)
 
 #
-# Sources for CUTLASS Profiler Tool
+# Sources for MUTLASS Profiler Tool
 #
-cmake_policy(SET CMP0112 NEW)
-set(CUTLASS_TOOLS_PROFILER_SOURCES
+set(MUTLASS_TOOLS_PROFILER_SOURCES
   src/main.cpp
-  src/cutlass_profiler.cu
-  src/options.cu
+  src/mutlass_profiler.mu
+  src/options.mu
   src/performance_report.cpp
   src/enumerated_types.cpp
   src/gpu_timer.cpp
-  src/device_allocation.cu
-  src/device_context.cu
-  src/cublas_helpers.cu             
-  src/cudnn_helpers.cpp                   
+  src/device_allocation.mu
+  src/device_context.mu
   src/problem_space.cpp
-  src/operation_profiler.cu
-  src/gemm_operation_profiler.cu
-  src/rank_k_operation_profiler.cu
-  src/rank_2k_operation_profiler.cu
-  src/trmm_operation_profiler.cu
-  src/symm_operation_profiler.cu
-  src/conv2d_operation_profiler.cu          
-  src/conv3d_operation_profiler.cu          
-  src/sparse_gemm_operation_profiler.cu
+  src/operation_profiler.mu
+  src/gemm_operation_profiler.mu
 )
 
 #
 # Build target
 #
 
-cutlass_add_executable(
-  cutlass_profiler
-  ${CUTLASS_TOOLS_PROFILER_SOURCES}
+mutlass_add_executable(
+  mutlass_profiler
+  ${MUTLASS_TOOLS_PROFILER_SOURCES}
 )
-add_executable(nvidia::cutlass::profiler ALIAS cutlass_profiler)
-set_target_properties(cutlass_profiler PROPERTIES EXPORT_NAME profiler)
+add_executable(mt::mutlass::profiler ALIAS mutlass_profiler)
+set_target_properties(mutlass_profiler PROPERTIES EXPORT_NAME profiler)
 
 #
 # Include paths
 #
-
 target_include_directories(
-  cutlass_profiler
+  mutlass_profiler
   PRIVATE
   ${CMAKE_CURRENT_LIST_DIR}/include
+  ${PROJECT_BINARY_DIR}/include 
   )
 
 #
@@ -81,50 +72,29 @@ target_include_directories(
 #
 
 target_link_libraries(
-  cutlass_profiler
+  mutlass_profiler
   PRIVATE 
-  cutlass_lib
-  cutlass_tools_util_includes
-  $<$<BOOL:${CUTLASS_ENABLE_CUBLAS}>:nvidia::cublas>
-  $<$<BOOL:${CUTLASS_ENABLE_CUDNN}>:nvidia::cudnn>
-  cudart
-  cuda_driver
+  mutlass_lib
+  mutlass_tools_util_includes
+  $<$<BOOL:${MUTLASS_ENABLE_MUBLAS}>:mt::mublas>
+  $<$<BOOL:${MUTLASS_ENABLE_MUDNN}>:mt::mudnn>
   )
 
 install(
-  TARGETS cutlass_profiler
-  EXPORT NvidiaCutlass
+  TARGETS mutlass_profiler
+  EXPORT MtMutlass
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   )
 
-if (CUDA_VERSION VERSION_GREATER_EQUAL 12.3 AND CUDA_VERSION VERSION_LESS 12.4 AND (90a IN_LIST CUTLASS_NVCC_ARCHS_ENABLED OR (90 IN_LIST CUTLASS_NVCC_ARCHS_ENABLED)))
-  set(CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_GEMM   --operation=Gemm       --providers=cutlass --verification-providers=cublas,host      --junit-output=test_cutlass_profiler_gemm    --print-kernel-before-running=true)
-else()
-  set(CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_GEMM   --operation=Gemm       --providers=cutlass --verification-providers=cublas,device      --junit-output=test_cutlass_profiler_gemm    --print-kernel-before-running=true)
-endif()
+  set(MUTLASS_PROFILER_TEST_COMMAND_OPTIONS_GEMM --operation=Gemm --providers=mutlass --junit-output=test_mutlass_profiler_gemm --print-kernel-before-running=true)
 
-set(CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_CONV2D --operation=Conv2d     --providers=cutlass --verification-providers=cudnn,device       --junit-output=test_cutlass_profiler_conv2d  --print-kernel-before-running=true)
-set(CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_CONV3D --operation=Conv3d     --providers=cutlass --verification-providers=cudnn,device,host  --junit-output=test_cutlass_profiler_conv3d  --print-kernel-before-running=true)
-set(CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_SPGEMM --operation=SparseGemm --providers=cutlass --verification-providers=cublas,device,host --junit-output=test_cutlass_profiler_spgemm  --print-kernel-before-running=true)
-set(CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_RANK_K   --operation=RankK       --providers=cutlass --verification-providers=cublas        --junit-output=test_cutlass_profiler_rank_k    --print-kernel-before-running=true)
-set(CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_RANK_2K   --operation=Rank2K       --providers=cutlass --verification-providers=cublas        --junit-output=test_cutlass_profiler_rank_2k --print-kernel-before-running=true)
-set(CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_TRMM   --operation=Trmm       --providers=cutlass --verification-providers=device,host        --junit-output=test_cutlass_profiler_trmm    --print-kernel-before-running=true)
-set(CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_SYMM   --operation=Symm       --providers=cutlass --verification-providers=cublas,host        --junit-output=test_cutlass_profiler_symm    --print-kernel-before-running=true)
 
-cutlass_add_executable_tests(
-  test_profiler cutlass_profiler
-  DEPENDEES test_all
-  TEST_COMMAND_OPTIONS
-    GEMM
-    CONV2D
-    CONV3D
-    SPGEMM
-    RANK_K
-    RANK_2K
-    TRMM
-    SYMM
-  TEST_COMMAND_OPTIONS_PREFIX
-    CUTLASS_PROFILER_TEST_COMMAND_OPTIONS_
-  DISABLE_EXECUTABLE_INSTALL_RULE
-  )
-
+  mutlass_add_executable_tests(
+    test_profiler mutlass_profiler
+    DEPENDEES test_all
+    TEST_COMMAND_OPTIONS
+      GEMM
+    TEST_COMMAND_OPTIONS_PREFIX
+      MUTLASS_PROFILER_TEST_COMMAND_OPTIONS_
+    DISABLE_EXECUTABLE_INSTALL_RULE
+    )
