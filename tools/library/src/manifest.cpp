@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -30,15 +31,15 @@
  **************************************************************************************************/
 
 /*! \file
-    \brief Manifest of CUTLASS Library
+    \brief Manifest of MUTLASS Library
 
-    This is the root of the data structure containing CUTLASS objects
+    This is the root of the data structure containing MUTLASS objects
 */
 
 #include <memory>
-#include "cutlass/library/manifest.h"
+#include "mutlass/library/manifest.h"
 
-namespace cutlass {
+namespace mutlass {
 namespace library {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,14 +55,11 @@ Status Manifest::initialize() {
     operations_.clear();
   }
 
-  // initialize procedurally generated cutlass op in manifest object
+  // initialize procedurally generated mutlass op in manifest object
   initialize_all(*this);
 
   // initialize manually instanced reference op in manifest object
   initialize_reference_operations(*this);
-
-  // initialize manually instanced reduction reference op in manifest object
-  initialize_all_reduction_op(*this);
 
   return Status::kSuccess;
 }
@@ -75,6 +73,11 @@ void Manifest::reserve(size_t operation_count) {
 Status Manifest::release() {
   operations_.clear();
   return Status::kSuccess;
+}
+
+/// Appends an operation and takes ownership
+void Manifest::append(Operation *operation_ptr) {
+  operations_.emplace_back(operation_ptr);
 }
 
 /// Returns an iterator to the first operation
@@ -95,6 +98,6 @@ OperationVector::const_iterator Manifest::end() const {
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 } // namespace library
-} // namespace cutlass
+} // namespace mutlass
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

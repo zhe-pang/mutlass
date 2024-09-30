@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -34,19 +35,19 @@
 
 #pragma once
 
-#include "cutlass/cutlass.h"
+#include "mutlass/mutlass.h"
 
-inline char const *to_string(cutlass::Status status) {
+inline char const *to_string(mutlass::Status status) {
 
   switch (status) {
-    case cutlass::Status::kSuccess: return "kSuccess";
-    case cutlass::Status::kErrorMisalignedOperand: return "kErrorMisalignedOperand";
-    case cutlass::Status::kErrorInvalidLayout: return "kErrorInvalidLayout";
-    case cutlass::Status::kErrorInvalidProblem: return "kErrorInvalidProblem";
-    case cutlass::Status::kErrorNotSupported: return "kErrorNotSupported";
-    case cutlass::Status::kErrorWorkspaceNull: return "kErrorWorkspaceNull";
-    case cutlass::Status::kErrorInternal: return "kErrorInternal";
-    case cutlass::Status::kInvalid: return "kInvalid";
+    case mutlass::Status::kSuccess: return "kSuccess";
+    case mutlass::Status::kErrorMisalignedOperand: return "kErrorMisalignedOperand";
+    case mutlass::Status::kErrorInvalidLayout: return "kErrorInvalidLayout";
+    case mutlass::Status::kErrorInvalidProblem: return "kErrorInvalidProblem";
+    case mutlass::Status::kErrorNotSupported: return "kErrorNotSupported";
+    case mutlass::Status::kErrorWorkspaceNull: return "kErrorWorkspaceNull";
+    case mutlass::Status::kErrorInternal: return "kErrorInternal";
+    case mutlass::Status::kInvalid: return "kInvalid";
     default: break;
   }
   return "invalid";

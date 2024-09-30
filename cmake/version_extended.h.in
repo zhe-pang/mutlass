@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -30,5 +31,5 @@
  **************************************************************************************************/
 #pragma once
 
-#define CUTLASS_BUILD @CUTLASS_VERSION_BUILD@
-#define CUTLASS_REVISION "@CUTLASS_REVISION@"
+#define MUTLASS_BUILD @MUTLASS_VERSION_BUILD@
+#define MUTLASS_REVISION "@MUTLASS_REVISION@"

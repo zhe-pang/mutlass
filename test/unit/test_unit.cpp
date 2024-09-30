@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -29,10 +30,9 @@
  *
  **************************************************************************************************/
 /** \file
-    \brief Unit tests for CUTLASS core
+    \brief Unit tests for MUTLASS core
 */
-
-#include "common/cutlass_unit_test.h"
+#include "common/mutlass_unit_test.h"
 
 int main(int argc, char* arg[]) {
   FilterArchitecture();

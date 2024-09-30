@@ -1,5 +1,6 @@
 /***************************************************************************************************
- * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,20 +30,18 @@
  *
  **************************************************************************************************/
 /* \file
-   \brief Defines operations for all GEMM operation kinds in CUTLASS Library.
+   \brief Defines operations for all GEMM operation kinds in MUTLASS Library.
 */
 
 #pragma once
 
-#include "cutlass/cutlass.h"
-#include "cutlass/library/library.h"
+#include "mutlass/mutlass.h"
+#include "mutlass/library/library.h"
 #include "library_internal.h"
-#include "cutlass/gemm/dispatch_policy.hpp"
-#include <unordered_map>
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-namespace cutlass::library {
+namespace mutlass::library {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -65,6 +64,7 @@ public:
   using ElementCompute = typename Operator::EpilogueOutputOp::ElementCompute;
 
 private:
+
   GemmDescription description_;
 
 public:
@@ -73,7 +73,7 @@ public:
   GemmOperation3xBase(char const *name = "unknown_gemm", GemmKind gemm_kind_ = GemmKind::kGemm) {
 
     description_.name = name;
-    description_.provider = Provider::kCUTLASS;
+    description_.provider = Provider::kMUTLASS;
     description_.kind = OperationKind::kGemm;
     description_.gemm_kind = gemm_kind_;
 
@@ -190,7 +190,7 @@ protected:
   };
 
   template<class FusionArgs>
-  struct UpdateFusionArgs<FusionArgs, cute::void_t<decltype(FusionArgs{}.alpha)>> {
+  struct UpdateFusionArgs<FusionArgs, mute::void_t<decltype(FusionArgs{}.alpha)>> {
     static Status update_(FusionArgs& fusion_args, GemmUniversalArguments const &arguments) {
       if (arguments.pointer_mode == ScalarPointerMode::kHost) {
         fusion_args.alpha = *static_cast<ElementCompute const *>(arguments.alpha);
@@ -216,8 +216,7 @@ protected:
 
   /// Constructs the arguments structure given the configuration and arguments
   static Status update_arguments_(
-      OperatorArguments &operator_args,
-      GemmUniversalArguments const *arguments) {
+      OperatorArguments &operator_args, GemmUniversalArguments const *arguments) {
     Status status = Status::kSuccess;
 
     status = UpdateFusionArgs<decltype(operator_args.epilogue.thread)>::update_(
@@ -227,7 +226,7 @@ protected:
     }
 
     // TODO: type erase Arguments structure in 3.0 GEMM
-    operator_args.problem_shape = cute::make_shape(
+    operator_args.problem_shape = mute::make_shape(
       arguments->problem_size.m(),
       arguments->problem_size.n(),
       arguments->problem_size.k(),
@@ -239,30 +238,16 @@ protected:
     operator_args.epilogue.ptr_C = static_cast<ElementC const *>(arguments->C);
     operator_args.epilogue.ptr_D = static_cast<ElementD       *>(arguments->D);
 
-    operator_args.mainloop.dA = cute::make_int_tuple_from<typename Operator::GemmKernel::StrideA>(
+    operator_args.mainloop.dA = mute::make_int_tuple_from<typename Operator::GemmKernel::StrideA>(
         arguments->lda, arguments->batch_stride_A);
-    operator_args.mainloop.dB = cute::make_int_tuple_from<typename Operator::GemmKernel::StrideB>(
+    operator_args.mainloop.dB = mute::make_int_tuple_from<typename Operator::GemmKernel::StrideB>(
         arguments->ldb, arguments->batch_stride_B);
-    operator_args.epilogue.dC = cute::make_int_tuple_from<typename Operator::GemmKernel::StrideC>(
+    operator_args.epilogue.dC = mute::make_int_tuple_from<typename Operator::GemmKernel::StrideC>(
         arguments->ldc, arguments->batch_stride_C);
     operator_args.epilogue.dD = operator_args.epilogue.dC;
 
     /* Query device SM count to pass onto the kernel as an argument, where needed */
     operator_args.hw_info.sm_count = arguments->sm_count;
-
-    if constexpr (!std::is_const_v<decltype(operator_args.scheduler.raster_order)>) {
-      using Enum_t = decltype(operator_args.scheduler.raster_order);
-      switch (arguments->raster_order) {
-        case RasterOrder::kAlongN:
-          operator_args.scheduler.raster_order = Enum_t::AlongN;
-          break;
-        case RasterOrder::kAlongM:
-          operator_args.scheduler.raster_order = Enum_t::AlongM;
-          break;
-        default:
-          operator_args.scheduler.raster_order = Enum_t::Heuristic;
-      }
-    }
 
     return status;
   }
@@ -272,7 +257,8 @@ public:
   /// Returns success if the operation can proceed
   Status can_implement(
       void const *configuration_ptr, void const *arguments_ptr) const override {
-    GemmUniversalConfiguration const *configuration =
+
+    GemmUniversalConfiguration const *configuration = 
       static_cast<GemmUniversalConfiguration const *>(configuration_ptr);
     GemmUniversalArguments const *arguments =
       static_cast<GemmUniversalArguments const *>(arguments_ptr);
@@ -284,11 +270,12 @@ public:
     }
 
     // can_implement rules may need access to problem shape
-    args.problem_shape = cute::make_shape(
+    args.problem_shape = mute::make_shape(
       configuration->problem_size.m(),
       configuration->problem_size.n(),
       configuration->problem_size.k(),
       configuration->batch_count);
+
     return Operator::can_implement(args);
   }
 
@@ -317,7 +304,7 @@ public:
       void const *configuration_ptr,
       void *host_workspace,
       void *device_workspace,
-      cudaStream_t stream = nullptr) const override {
+      musaStream_t stream = nullptr) const override {
     Operator *op = new (host_workspace) Operator;
     return Status::kSuccess;
   }
@@ -327,7 +314,7 @@ public:
       void const *arguments_ptr,
       void *host_workspace,
       void *device_workspace = nullptr,
-      cudaStream_t stream = nullptr) const override {
+      musaStream_t stream = nullptr) const override {
 
     OperatorArguments args;
     Status status = update_arguments_(args, static_cast<GemmUniversalArguments const *>(arguments_ptr));
@@ -343,6 +330,6 @@ public:
 };
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-} // namespace cutlass::library
+} // namespace mutlass::library
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

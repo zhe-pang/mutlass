@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -36,13 +37,13 @@
 #include <stdexcept>
 #include <sstream>
 
-#include "cutlass/library/util.h"
+#include "mutlass/library/util.h"
 
-#include "cutlass/profiler/problem_space.h"
+#include "mutlass/profiler/problem_space.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-namespace cutlass {
+namespace mutlass {
 namespace profiler {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -665,11 +666,11 @@ void ProblemSpace::parse_(KernelArgument *arg, CommandLine const &cmdline) {
           if (!tensor_tokens.empty()) {
             TensorArgument::TensorDescription tensor_desc;
 
-            tensor_desc.element = cutlass::library::from_string<library::NumericTypeID>(tensor_tokens.front());
+            tensor_desc.element = mutlass::library::from_string<library::NumericTypeID>(tensor_tokens.front());
 
             // Layout
             if (tensor_tokens.size() > 1) {
-              tensor_desc.layout = cutlass::library::from_string<library::LayoutTypeID>(tensor_tokens.at(1));
+              tensor_desc.layout = mutlass::library::from_string<library::LayoutTypeID>(tensor_tokens.at(1));
             }
 
             // Stride
@@ -1262,6 +1263,6 @@ bool iterator_algorithm_satisfies(
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 } // namespace profiler
-} // namespace cutlass
+} // namespace mutlass
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

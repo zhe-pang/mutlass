@@ -1,4 +1,5 @@
 /***************************************************************************************************
+ * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -32,9 +33,9 @@
    \brief Provides several functions for filling tensors with data.
 */
 
-#include "cutlass/profiler/enumerated_types.h"
+#include "mutlass/profiler/enumerated_types.h"
 
-namespace cutlass {
+namespace mutlass {
 namespace profiler {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -269,7 +270,7 @@ ArgumentTypeID from_string<ArgumentTypeID>(std::string const &str) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 } // namespace profiler
-} // namespace cutlass
+} // namespace mutlass
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
