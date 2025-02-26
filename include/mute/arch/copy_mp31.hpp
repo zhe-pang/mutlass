@@ -191,6 +191,38 @@ struct MP31_ROBUST_LDGSTS
   }
 };
 
+// LDGSTS
+template <class TS, class TD = TS>
+struct MP31_LDGSTS
+{
+  using SRegisters = TS[1];
+  using DRegisters = TD[1];
+
+  static_assert(sizeof(TS) == sizeof(TD),
+                "MP31_ROBUST_LDGSTS requires sizeof(src_value_type) == sizeof(dst_value_type)");
+  static_assert(sizeof(TS) == 1  || sizeof(TS) == 2  || sizeof(TS) == 4  || sizeof(TS) == 8 ||
+                sizeof(TS) == 16 || sizeof(TS) == 32 || sizeof(TS) == 64 || sizeof(TS) == 128,
+                "MP31_ROBUST_LDGSTS sizeof(TS) is not supported");
+
+  MUTE_HOST_DEVICE static void
+  copy(TS const& gmem_src,
+       TD      & smem_dst)
+  {
+#if defined(MUTE_ARCH_ROBUST_BUFFER_ACCESS_ACTIVATED)
+    uint64_t gmem_int_ptr = reinterpret_cast<uint64_t>(&gmem_src);
+    uint32_t smem_int_ptr = cast_smem_ptr_to_uint(&smem_dst);
+    auto gmem_ptr = make_ptr_with_address_space<AddressSpace::Global>(gmem_int_ptr);
+    auto smem_ptr = make_ptr_with_address_space<AddressSpace::Shared>(smem_int_ptr);
+    constexpr PrefetchSize prefetch_size = PrefetchSize::B128;
+    __musa_memcpy_g2s(smem_ptr, gmem_ptr, sizeof(TS), static_cast<int>(prefetch_size));
+#else
+    MUTE_INVALID_CONTROL_PATH(
+        "Trying to use MP31_LDGSTS without MUTE_ARCH_ROBUST_BUFFER_ACCESS_ACTIVATED.");
+#endif
+  }
+};
+
+
 MUTE_HOST_DEVICE
 void
 ldgsts_wait() {

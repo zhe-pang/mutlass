@@ -369,4 +369,19 @@ struct Copy_Traits<MP31_ROBUST_LDGSTS<S, D>>
 
 };
 
+template <class S, class D>
+struct Copy_Traits<MP31_LDGSTS<S, D>>
+{
+  // Logical thread id to thread idx (one-thread)
+  using ThrID     = Layout<_1>;
+
+  // Map from (src-thr,src-val) to bit
+  using SrcLayout = Layout<Shape<_1, Int<sizeof_bits<S>::value>>>;
+  // Map from (dst-thr,dst-val) to bit
+  using DstLayout = Layout<Shape<_1, Int<sizeof_bits<D>::value>>>;
+
+  // Reference map from (thr,val) to bit
+  using RefLayout = SrcLayout;
+};
+
 } // namespace mute
