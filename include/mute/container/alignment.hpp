@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -55,17 +55,17 @@ is_byte_aligned(void const* const ptr)
 #  define MUTE_ALIGNAS(n) alignas(n)
 #endif
 
-template <size_t Alignment>
+template <size_t Alignment, class Child = void>
 struct aligned_struct {};
 
-template <> struct MUTE_ALIGNAS(  1) aligned_struct<  1> {};
-template <> struct MUTE_ALIGNAS(  2) aligned_struct<  2> {};
-template <> struct MUTE_ALIGNAS(  4) aligned_struct<  4> {};
-template <> struct MUTE_ALIGNAS(  8) aligned_struct<  8> {};
-template <> struct MUTE_ALIGNAS( 16) aligned_struct< 16> {};
-template <> struct MUTE_ALIGNAS( 32) aligned_struct< 32> {};
-template <> struct MUTE_ALIGNAS( 64) aligned_struct< 64> {};
-template <> struct MUTE_ALIGNAS(128) aligned_struct<128> {};
-template <> struct MUTE_ALIGNAS(256) aligned_struct<256> {};
+template <class Child> struct MUTE_ALIGNAS(  1) aligned_struct<  1, Child> {};
+template <class Child> struct MUTE_ALIGNAS(  2) aligned_struct<  2, Child> {};
+template <class Child> struct MUTE_ALIGNAS(  4) aligned_struct<  4, Child> {};
+template <class Child> struct MUTE_ALIGNAS(  8) aligned_struct<  8, Child> {};
+template <class Child> struct MUTE_ALIGNAS( 16) aligned_struct< 16, Child> {};
+template <class Child> struct MUTE_ALIGNAS( 32) aligned_struct< 32, Child> {};
+template <class Child> struct MUTE_ALIGNAS( 64) aligned_struct< 64, Child> {};
+template <class Child> struct MUTE_ALIGNAS(128) aligned_struct<128, Child> {};
+template <class Child> struct MUTE_ALIGNAS(256) aligned_struct<256, Child> {};
 
 } // end namespace mute

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -40,6 +40,22 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace mutlass {
+
+template <typename T> 
+struct Type2Type  
+{  
+  using type=T;                    
+};
+// using the simple type to replace the complex type to reduce this symbol size
+template <typename  T>  
+struct GetUnderlyingKernel: public Type2Type<T>
+{};
+template <uint64_t shader_guid, unsigned index, template <uint64_t, unsigned> class Wrapper > 
+struct GetUnderlyingKernel<Wrapper<shader_guid,index>>: public Wrapper<shader_guid,index> 
+{};
+template <typename  T>  
+using GetUnderlyingKernel_t = typename GetUnderlyingKernel<T>::type;
+
 
 ////////////////////////////////////////////////////////////////////////////////
 

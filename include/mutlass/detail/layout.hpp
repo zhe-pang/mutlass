@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,12 +31,19 @@
  **************************************************************************************************/
 #pragma once
 
+#include "mute/layout.hpp"
+#include "mute/pointer_sparse.hpp"       // mute::is_sparse
+#include "mute/swizzle.hpp"              // mute::Swizzle
+#include "mute/swizzle_layout.hpp"       // mute::detail::get_swizzle_portion
+#include "mute/util/type_traits.hpp"
+#include "mute/arch/copy_mp31_tme.hpp"
 #include "mutlass/layout/matrix.h"
 #include "mutlass/layout/tensor.h"
 #include "mutlass/numeric_types.h"
 
 #include "mute/layout.hpp"
 #include "mute/util/type_traits.hpp"
+#include "mute/arch/copy_mp31_tme.hpp"
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace mutlass::detail {
@@ -199,7 +206,14 @@ template<class StrideA>
 constexpr
 auto
 stride_to_layout_tag_A() {
+  using InternalStrideA = mute::remove_pointer_t<StrideA>;
   if constexpr (is_major<0, StrideA>()) { // M major
+    return layout::ColumnMajor{};
+  }
+  // Specialize for sparse layout
+  else if constexpr (mute::get<0>(InternalStrideA{}) == mute::_2{} &&
+                     mute::rank(mute::get<1>(InternalStrideA{})) == 2 &&
+                     mute::is_same_v<mute::_1, mute::remove_cvref_t<decltype(mute::get<1,0>(InternalStrideA{}))>>) {
     return layout::ColumnMajor{};
   }
   else { // K major
@@ -265,6 +279,22 @@ using StrideToLayoutTagC_t = typename StrideToLayoutTagC<S>::type;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Inspects a tiled copy and whether its copy engine is TME or not
+template<class GmemTiledCopy>
+constexpr bool is_tme_copy_engine() {
+  if constexpr (mute::is_void_v<GmemTiledCopy>) {
+    return false;
+  }
+  else {
+   if constexpr (    mute::is_same_v<mute::MP31_TME_LOAD,  GmemTiledCopy>
+                  || mute::is_same_v<mute::MP31_TME_STORE, GmemTiledCopy>
+                  ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 template <class X, class = void>
 struct RawDtype { using type = X; };
 
@@ -287,8 +317,18 @@ get_alignment_count_from_gmem_tiled_copy() {
   }
 
   else {
-    // For non-TMA tiled copies, TiledCopy holds the alignment count directly in its TiledShape_MN
-    return GmemTiledCopy::NumValSrc;
+    if constexpr (is_tme_copy_engine<GmemTiledCopy>()) {
+      if constexpr (mute::is_sparse_v<ElementMma>) {
+        return 32 / sizeof_bits<Element>::value * ElementMma::sparsity;
+      }
+      return 32 / mute::sizeof_bits_v<Element>;
+    }
+    else {
+      // For non-TME tiled copies, TiledCopy holds the alignment count directly in its TiledShape_MN
+      return GmemTiledCopy::NumValSrc;
+    }
+
+
   }
 }
 

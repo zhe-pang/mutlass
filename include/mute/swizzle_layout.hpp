@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,12 +31,10 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mute/config.hpp>
-
-#include <mute/layout.hpp>
-#include <mute/layout_composed.hpp>
-
-#include <mute/swizzle.hpp>
+#include <mute/config.hpp>           // MUTE_HOST_DEVICE
+#include <mute/layout.hpp>           // mute::Layout
+#include <mute/layout_composed.hpp>  // mute::ComposedLayout
+#include <mute/swizzle.hpp>          // mute::Swizzle, mute::get_swizzle primary template
 
 /* Specialized functionality for a ComposedLayout of the form
  *   InvolutionFn o Offset o LayoutB
@@ -118,7 +116,7 @@ MUTE_HOST_DEVICE constexpr
 auto
 make_fragment_like(ComposedLayout<Swizzle<B,M,S>,Offset,Layout> const& layout)
 {
-  return detail::transfer_swizzle<B,M,S>(layout.layout_b(), make_fragment_like(layout.layout_b()));
+  return make_fragment_like(layout.layout_b());
 }
 
 //
@@ -190,7 +188,7 @@ make_swizzle_strides(true_type,
   //   0  Z  DC
   //   1 -Z  DC
 
-  return mute::make_tuple(conditional_return((offset & (Y << Int<I>{})) == Int<0>{}, Z << Int<I>{}, -(Z << Int<I>{}))...);
+  return mute::make_tuple(conditional_return((offset & (Y << Int<I>{})) == Int<0>{}, Z * Int<(1 << I)>{}, -Z * Int<(1 << I)>{})...);
 }
 
 template <class IntZ, class IntY, class Offset, int... I>
@@ -211,7 +209,7 @@ make_swizzle_strides(false_type,
   //   0 Y+Z Y-Z
   //   1 DC  DC
 
-  return mute::make_tuple(conditional_return((offset & (Z << Int<I>{})) == Int<0>{}, (Y+Z) << Int<I>{}, (Y-Z) << Int<I>{})...);
+  return mute::make_tuple(conditional_return((offset & (Z << Int<I>{})) == Int<0>{}, (Y+Z) * Int<(1 << I)>{}, (Y-Z) * Int<(1 << I)>{})...);
 }
 
 } // end namespace detail
@@ -237,16 +235,6 @@ slice_and_offset(Coord const& coord, ComposedLayout<Swizzle<B,M,S>,Offset,Layout
     // The portion of the layout that is not yet consumed
     auto sliced_layout = slice(coord, layout.layout_b());
 
-    // If the sliced_layout hits two bits that are swizzled together, then don't attempt to decay
-
-    // Compose with the layout to get the swizzle projection, P o L  [The Z and Y contributing portions of L]
-    //   (this also tests that shape/stride of layout compose with swizzle)
-    auto sliced_layout_only_zy = composition(swizzle_only_zy, sliced_layout);
-    // Transform the end coordinate to get the active bits of the swizzle, (P o L)(c*)
-    auto swizzle_active_bits = sliced_layout_only_zy(size(sliced_layout_only_zy)-Int<1>{});
-    // Determine if any active bits collide under the swizzle
-    auto hit_ZandY = !(swizzle_active_bits & ~layout.layout_a()(swizzle_active_bits));
-
     // The portion of the layout that we are consuming now
     auto diced_layout = dice(coord, layout.layout_b());
     auto diced_coord  = dice(coord, coord);
@@ -266,8 +254,16 @@ slice_and_offset(Coord const& coord, ComposedLayout<Swizzle<B,M,S>,Offset,Layout
     // If Layout's codomain hits on         Y XOR Z, then it's dynamic-normal
     // If Layout's codomain hits on neither Y NOR Z, then it's static-normal
 
-    // Test the sliced layout for hit_X & hit_Y for potential decay
-    if constexpr (is_constant<false, decltype(hit_ZandY)>::value)
+    // If the sliced_layout hits two bits that are swizzled together, then don't attempt to decay
+
+    // Compose with the layout to get the swizzle projection, P o L  [The Z and Y contributing portions of L]
+    //   (this also tests that shape/stride of layout compose with swizzle)
+    auto sliced_layout_only_zy = composition(swizzle_only_zy, sliced_layout);
+    // Transform the end coordinate to get the active bits of the swizzle, (P o L)(c*)
+    [[maybe_unused]] auto swizzle_active_bits = sliced_layout_only_zy(size(sliced_layout_only_zy)-Int<1>{});
+
+    // Determine if any active bits collide under the swizzle for potential decay
+    if constexpr (is_constant<0, decltype(not (swizzle_active_bits & ~swizzle(swizzle_active_bits)))>::value)
     { // Hits on Y AND Z, so it's not reducible
       return mute::make_tuple(composition(swizzle, offset_only_zy, sliced_layout), offset_anti_zy);
     } else
@@ -446,9 +442,27 @@ recast_layout(Swizzle<B,M,S> const& swizzle)
     return upcast<scale::num>(swizzle);
   }
   else {
-    static_assert(dependent_false<scale>, "Recast not supported.");
+    return downcast<scale::den>(upcast<scale::num>(layout));
   }
   MUTE_GCC_UNREACHABLE;
+}
+
+template <int B, int M, int S>
+MUTE_HOST_DEVICE constexpr
+auto
+max_alignment(Swizzle<B,M,S> const&)
+{
+  return Int<(1 << M)>{};
+}
+
+template <int B, int M, int S, class Offset, class LayoutB>
+MUTE_HOST_DEVICE constexpr
+auto
+max_alignment(ComposedLayout<Swizzle<B,M,S>,Offset,LayoutB> const& layout)
+{
+  return gcd(max_alignment(layout.layout_a()),
+             max_alignment(layout.offset()),
+             max_alignment(layout.layout_b()));
 }
 
 //
@@ -486,7 +500,7 @@ max_common_vector(ComposedLayout<Swizzle<B,M,S>,Offset,LayoutB> const& a,
                   Layout<Shape,Stride>                          const& b)
 {
   // This assumes that Offset is in the YZ domain of the Swizzle...
-  return mute::min(Int<(1 << M)>{}, max_common_vector(a.layout_b(), b));
+  return mute::min(max_common_vector(a.layout_b(), b), Int<(1 << M)>{});
 }
 
 template <class Shape, class Stride, int B, int M, int S, class Offset, class LayoutB>
@@ -505,12 +519,15 @@ auto
 max_common_vector(ComposedLayout<Swizzle<B0,M0,S0>,Offset0,LayoutB0> const& a,
                   ComposedLayout<Swizzle<B1,M1,S1>,Offset1,LayoutB1> const& b)
 {
-  auto result = coalesce(composition(a, right_inverse(b)));
+  // Typical impl is composition(a, right_inverse(b))
+  // so this is  Sw0 o B0 o rinv(Sw1 o B1) = Sw0 o B0 o rinv(B1) o Sw1
+  auto vec = max_common_vector(a.layout_b(), b.layout_b());
 
-  if constexpr (is_constant<1, decltype(stride<0>(result.layout_b()))>::value) {
-    return shape<0>(result);
+  // This assumes that Offset is in the YZ domain of the Swizzle...
+  if constexpr (Swizzle<B0,M0,S0>{} == Swizzle<B1,M1,S1>{}) {
+    return vec;
   } else {
-    return Int<1>{};
+    return mute::min(vec, Int<(1 << M0)>{}, Int<(1 << M1)>{});
   }
 
   MUTE_GCC_UNREACHABLE;

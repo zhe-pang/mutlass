@@ -1,4 +1,4 @@
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -151,6 +151,7 @@ function(mutlass_add_mutlass_library)
       PUBLIC mutlass_library_includes
       PRIVATE -Wl,--whole-archive $<BUILD_INTERFACE:${__NAME}_objs>
       -Wl,--no-whole-archive
+      musa_driver
       )
     
     set_target_properties(${__NAME} PROPERTIES DEBUG_POSTFIX "${MUTLASS_LIBRARY_DEBUG_POSTFIX}")
@@ -179,6 +180,7 @@ function(mutlass_add_mutlass_library)
       ${__NAME}_static
       PUBLIC mutlass_library_includes
       PRIVATE $<BUILD_INTERFACE:${__NAME}_objs>
+      musa_driver
       )
     
     set_target_properties(${__NAME}_static PROPERTIES DEBUG_POSTFIX "${MUTLASS_LIBRARY_DEBUG_POSTFIX}")
@@ -217,7 +219,8 @@ mutlass_add_mutlass_library(
   src/util.mu
 
   # files split for parallel compilation
-  src/reference/gemm_int8_canonical.mu
+  src/reference/gemm_s8_s8_s32.mu
+  src/reference/gemm_u8_u8_s32.mu
   src/reference/gemm_fp32out.mu
   src/reference/gemm_fp_other.mu
   src/reference/initialize_reference_operations.mu

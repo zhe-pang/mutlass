@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -67,4 +67,6 @@ struct CollectiveMma {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "mutlass/gemm/collective/mp22_mma_twostage.hpp"
+#include "mutlass/gemm/collective/mp31_mma_tme_sqmma_ss.hpp"
+#include "mutlass/gemm/collective/mp31_mma_tme_sqmma_ss_scaling.hpp"
 /////////////////////////////////////////////////////////////////////////////////////////////////

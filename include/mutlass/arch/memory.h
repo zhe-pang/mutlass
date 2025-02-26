@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -40,6 +40,18 @@
 
 namespace mutlass {
 namespace arch {
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// AddressSpace
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+enum class AddressSpace {
+  Generic = 0,
+  Global  = 1,
+  Shared  = 3,
+};
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -253,7 +265,8 @@ void shared_load(void *dst, uint32_t ptr);
 template <>
 MUTLASS_DEVICE
 void shared_load<2>(void *dst, uint32_t ptr) {
-  auto smem_ptr = reinterpret_cast<uint16_t __attribute__((address_space(3)))*>(ptr);
+  auto smem_ptr = reinterpret_cast<
+                    uint16_t __attribute__((address_space(static_cast<int>(AddressSpace::Shared))))*>(ptr);
   uint16_t *dst_u16  = reinterpret_cast<uint16_t*>(dst);
   *dst_u16 = *smem_ptr;
 }
@@ -262,7 +275,8 @@ void shared_load<2>(void *dst, uint32_t ptr) {
 template <>
 MUTLASS_DEVICE
 void shared_load<4>(void *dst, uint32_t ptr) {
-  auto smem_ptr = reinterpret_cast<uint32_t __attribute__((address_space(3)))*>(ptr);
+  auto smem_ptr = reinterpret_cast<
+                    uint32_t __attribute__((address_space(static_cast<int>(AddressSpace::Shared))))*>(ptr);
   uint32_t *dst_u32  = reinterpret_cast<uint32_t*>(dst);
   *dst_u32 = *smem_ptr;
 }
@@ -271,7 +285,8 @@ void shared_load<4>(void *dst, uint32_t ptr) {
 template <>
 MUTLASS_DEVICE
 void shared_load<8>(void *dst, uint32_t ptr) {
-  auto smem_ptr = reinterpret_cast<uint64_t __attribute__((address_space(3)))*>(ptr);
+  auto smem_ptr = reinterpret_cast<
+                    uint64_t __attribute__((address_space(static_cast<int>(AddressSpace::Shared))))*>(ptr);
   uint64_t *dst_u64 = reinterpret_cast<uint64_t *>(dst);
   *dst_u64 = *smem_ptr;
 }
@@ -281,7 +296,8 @@ template <>
 MUTLASS_DEVICE
 void shared_load<16>(void *dst, uint32_t ptr) {
   using Type = uint32_t __attribute__((vector_size(16)));
-  auto smem_ptr = reinterpret_cast<Type __attribute__((address_space(3)))*>(ptr);
+  auto smem_ptr = reinterpret_cast<
+                    Type __attribute__((address_space(static_cast<int>(AddressSpace::Shared))))*>(ptr);
   Type *dst_u128 = reinterpret_cast<Type *>(dst);
   *dst_u128 = *smem_ptr;
 }
@@ -298,7 +314,8 @@ void shared_store(uint32_t ptr, void const *src);
 template <>
 MUTLASS_DEVICE
 void shared_store<2>(uint32_t ptr, void const *src) {
-  auto smem_ptr = reinterpret_cast<uint16_t __attribute__((address_space(3)))*>(ptr);
+  auto smem_ptr = reinterpret_cast<
+                    uint16_t __attribute__((address_space(static_cast<int>(AddressSpace::Shared)))*>(ptr);
   *smem_ptr = *reinterpret_cast<uint16_t const*>(src);
 }
 
@@ -306,7 +323,8 @@ void shared_store<2>(uint32_t ptr, void const *src) {
 template <>
 MUTLASS_DEVICE
 void shared_store<4>(uint32_t ptr, void const *src) {
-  auto smem_ptr = reinterpret_cast<uint32_t __attribute__((address_space(3)))*>(ptr);
+  auto smem_ptr = reinterpret_cast<
+                    uint32_t __attribute__((address_space(static_cast<int>(AddressSpace::Shared))))*>(ptr);
   *smem_ptr = *reinterpret_cast<uint32_t const*>(src);
 }
 
@@ -314,7 +332,8 @@ void shared_store<4>(uint32_t ptr, void const *src) {
 template <>
 MUTLASS_DEVICE
 void shared_store<8>(uint32_t ptr, void const *src) {
-  auto smem_ptr = reinterpret_cast<uint64_t __attribute__((address_space(3)))*>(ptr);
+  auto smem_ptr = reinterpret_cast<
+                    uint64_t __attribute__((address_space(static_cast<int>(AddressSpace::Shared))))*>(ptr);
   *smem_ptr = *reinterpret_cast<uint64_t const*>(src);
 }
 
@@ -323,7 +342,8 @@ template <>
 MUTLASS_DEVICE
 void shared_store<16>(uint32_t ptr, void const *src) {
   using Type = uint32_t __attribute__((vector_size(16)));
-  auto smem_ptr = reinterpret_cast<Type __attribute__((address_space(3)))*>(ptr);
+  auto smem_ptr = reinterpret_cast<
+                    Type __attribute__((address_space(static_cast<int>(AddressSpace::Shared))))*>(ptr);
   *smem_ptr = *reinterpret_cast<Type const*>(src);
 }
 

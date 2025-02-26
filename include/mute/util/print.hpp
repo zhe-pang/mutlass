@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,9 +31,8 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mute/config.hpp>
-
-#include <mute/util/type_traits.hpp>
+#include <mute/config.hpp>           // MUTE_HOST_DEVICE
+#include <mute/util/type_traits.hpp> // mute::is_valid
 
 //
 // MUSA compatible print and printf
@@ -157,50 +156,45 @@ print(char const* format) {
 // pretty printing
 //
 
-template <class T>
 MUTE_HOST_DEVICE void
-pretty_print(T const& v) {
-  printf("  "); print(v);
-}
-
-MUTE_HOST_DEVICE void
-pretty_print(bool const& v) {
+pretty_print(bool v) {
   printf("%*d", 3, int(v));
 }
 
 MUTE_HOST_DEVICE void
-pretty_print(int32_t const& v) {
+pretty_print(int32_t v) {
   printf("%*d", 5, v);
 }
 
 MUTE_HOST_DEVICE void
-pretty_print(uint32_t const& v) {
+pretty_print(uint32_t v) {
   printf("%*d", 5, v);
 }
 
 MUTE_HOST_DEVICE void
-pretty_print(int64_t const& v) {
+pretty_print(int64_t v) {
   printf("%*lld", 5, static_cast<long long>(v));
 }
 
 MUTE_HOST_DEVICE void
-pretty_print(uint64_t const& v) {
+pretty_print(uint64_t v) {
   printf("%*llu", 5, static_cast<unsigned long long>(v));
 }
 
 MUTE_HOST_DEVICE void
-pretty_print(half_t const& v) {
-  printf("%*.2f", 8, float(v));
-}
-
-MUTE_HOST_DEVICE void
-pretty_print(float const& v) {
+pretty_print(float v) {
   printf("%*.2e", 10, v);
 }
 
 MUTE_HOST_DEVICE void
-pretty_print(double const& v) {
+pretty_print(double v) {
   printf("%*.3e", 11, v);
+}
+
+template <class T>
+MUTE_HOST_DEVICE void
+pretty_print(T t) {
+  printf("  "); print(t);
 }
 
 } // end namespace mute

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -164,7 +164,7 @@ struct MusaHostAdapter {
     dim3 const grid_dims,
     dim3 const block_dims,
     size_t const smem_size,
-    musaStream_t cuda_stream,
+    musaStream_t musa_stream,
     void** kernel_params,
     int32_t kernel_index) const = 0;
 
@@ -174,7 +174,7 @@ struct MusaHostAdapter {
     dim3 const cluster_dims,
     dim3 const block_dims,
     size_t const smem_size,
-    musaStream_t cuda_stream,
+    musaStream_t musa_stream,
     void** kernel_params,
     int32_t kernel_index) const = 0;
 

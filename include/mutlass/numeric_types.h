@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -35,8 +35,6 @@
 */
 #pragma once
 
-#include "mutlass/mutlass.h"
-#include "mutlass/platform/platform.h"
 #include "mutlass/numeric_size.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

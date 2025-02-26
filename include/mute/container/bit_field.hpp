@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -36,10 +36,9 @@
 
 #pragma once
 
-#include <mute/config.hpp>
-
+#include <mute/config.hpp>                  // MUTE_HOST_DEVICE
 #include <mute/numeric/numeric_types.hpp>   // uint_bit_t
-
+#include <mute/util/type_traits.hpp>        // mute::is_same
 namespace mute
 {
 

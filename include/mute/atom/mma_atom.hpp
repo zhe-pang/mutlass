@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -48,11 +48,12 @@ template <class MMAOperation>
 struct MMA_Atom<MMAOperation> : MMA_Atom<MMA_Traits<MMAOperation>>
 {};
 
-template <class... Args>
-struct MMA_Atom<MMA_Traits<Args...>>
-  : MMA_Traits<Args...>
+template <class MMAOperation, class... Args>
+struct MMA_Atom<MMA_Traits<MMAOperation, Args...>>
+  : MMA_Traits<MMAOperation, Args...>
 {
-  using Traits = MMA_Traits<Args...>;
+  using MMA_Op = MMAOperation;
+  using Traits = MMA_Traits<MMAOperation, Args...>;
 
   // Element value types from the MMA_Traits
   using ValTypeD = typename Traits::ValTypeD;
@@ -943,3 +944,5 @@ print_latex_mma(LayoutC const& C, ThrIDC const& TC,  // (m,n) -> (tid,vid)  and 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <mute/atom/mma_traits_mp22.hpp>
+#include <mute/atom/mma_traits_mp31_sqmma.hpp>
+#include <mute/atom/mma_traits_mp31.hpp>

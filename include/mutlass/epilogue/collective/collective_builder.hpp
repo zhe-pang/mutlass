@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -30,6 +30,9 @@
  *
  **************************************************************************************************/
 #pragma once
+
+#include <mute/arch/copy.hpp>         // mute::DefaultCopy
+#include <mute/util/type_traits.hpp>  // mute::is_base_of_v
 
 #include "mutlass/detail/dependent_false.hpp"
 #include "mutlass/epilogue/fusion/callbacks.hpp"
@@ -65,6 +68,7 @@ template <
   int AlignmentD,
   class EpilogueScheduleType,
   class FusionOpOrCallbacks = fusion::LinearCombination<ElementD,ElementCompute>,
+  class MainloopCollective = void,
   class Enable = void
 >
 struct CollectiveBuilder {
@@ -116,4 +120,5 @@ struct CallbacksBuilder<
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "builders/mp22_builder.inl"
+#include "builders/mp31_builder.inl"
 /////////////////////////////////////////////////////////////////////////////////////////////////

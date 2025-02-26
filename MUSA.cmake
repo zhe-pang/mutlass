@@ -1,4 +1,4 @@
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -53,6 +53,82 @@ if(MUSA_FOUND)
 else ()
   message(FATAL_ERROR "MUSA_NOT_FOUND")
 endif()
+
+find_library(
+  MUSART_LIBRARY musart
+  PATHS
+  ${CUSTOM_MUSA_PATH}
+  PATH_SUFFIXES
+  lib/x86_64-linux-gnu
+  lib/x64
+  lib64
+  lib
+  NO_DEFAULT_PATH
+  )
+
+
+
+if(NOT TARGET musart AND MUSART_LIBRARY)
+  message(STATUS "MUSART: ${MUSART_LIBRARY}")
+  if(WIN32)
+    add_library(musart STATIC IMPORTED GLOBAL)
+  else()
+    add_library(musart SHARED IMPORTED GLOBAL)
+  endif()
+
+  add_library(mt::musart ALIAS musart)
+
+  set_property(
+    TARGET musart
+    PROPERTY IMPORTED_LOCATION
+    ${MUSART_LIBRARY}
+    )
+elseif(TARGET musart)
+  message(STATUS "MUSART: Already Found")
+else()
+  message(STATUS "MUSART: Not Found")
+endif()
+
+
+find_library(
+  MUSA_DRIVER_LIBRARY musa
+  PATHS
+  ${CUSTOM_MUSA_PATH}
+  PATH_SUFFIXES
+  lib/x86_64-linux-gnu
+  lib/x64
+  lib64
+  lib
+  lib64/stubs
+  lib/stubs
+  NO_DEFAULT_PATH
+  )
+
+
+if(NOT TARGET musa_driver AND MUSA_DRIVER_LIBRARY)
+  message(STATUS "MUSA Driver: ${MUSA_DRIVER_LIBRARY}")
+  if(WIN32)
+    add_library(musa_driver STATIC IMPORTED GLOBAL)
+    # Even though we're linking against a .dll, in Windows you statically link against
+    # the .lib file found under lib/x64. The .dll will be loaded at runtime automatically
+    # from the PATH search.
+  else()
+    add_library(musa_driver SHARED IMPORTED GLOBAL)
+  endif()
+
+  add_library(mt::musa_driver ALIAS musa_driver)
+
+  set_property(
+    TARGET musa_driver
+    PROPERTY IMPORTED_LOCATION
+    ${MUSA_DRIVER_LIBRARY}
+    )
+elseif(TARGET musa_driver)
+  message(STATUS "MUSA Driver: Already Found")
+else()
+  message(STATUS "MUSA Driver: Not Found")
+endif()
+
 
 function(mutlass_add_library NAME)
 

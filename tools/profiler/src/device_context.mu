@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -42,29 +42,16 @@ namespace profiler {
 
 /// Allocates memory of a given type, capacity (elements), and name
 DeviceAllocation *DeviceContext::allocate_block(
+  Options const &options,
   std::string const &name,
-  library::NumericTypeID type, 
-  size_t capacity) {
+  library::NumericTypeID type,
+  size_t capacity,
+  size_t device_index) {
 
-  device_memory_.emplace_back(type, capacity);
+  int device = options.device.device_id(device_index);
+  device_memory_.emplace_back(type, capacity, device);
   DeviceAllocation *allocation = &device_memory_.back();
-  
-  allocations_[name] = allocation;
-  return allocation;
-}
 
-/// Allocates memory of a given type, capacity (elements), and name
-DeviceAllocation *DeviceContext::allocate_tensor(
-  std::string const &name,
-  library::NumericTypeID type, 
-  library::LayoutTypeID layout_id, 
-  std::vector<int> const &extent, 
-  std::vector<int64_t> const &stride,
-  int batch_count) {
-
-  device_memory_.emplace_back(type, layout_id, extent, stride, batch_count);
-  DeviceAllocation *allocation = &device_memory_.back();
-  
   allocations_[name] = allocation;
   return allocation;
 }
@@ -73,18 +60,40 @@ DeviceAllocation *DeviceContext::allocate_tensor(
 DeviceAllocation *DeviceContext::allocate_tensor(
   Options const &options,
   std::string const &name,
-  library::NumericTypeID type, 
-  library::LayoutTypeID layout_id, 
-  std::vector<int> const &extent, 
+  library::NumericTypeID type,
+  library::LayoutTypeID layout_id,
+  std::vector<int> const &extent,
   std::vector<int64_t> const &stride,
   int batch_count,
-  int seed_shift) {
+  size_t device_index) {
 
-  DeviceAllocation *allocation = 
-    allocate_tensor(name, type, layout_id, extent, stride, batch_count);
+  int device = options.device.device_id(device_index);
+  device_memory_.emplace_back(type, layout_id, extent, stride, batch_count,
+                              device);
+  DeviceAllocation *allocation = &device_memory_.back();
+
+  allocations_[name] = allocation;
+  return allocation;
+}
+
+/// Allocates memory of a given type, capacity (elements), and name
+DeviceAllocation *DeviceContext::allocate_and_initialize_tensor(
+  Options const &options,
+  std::string const &name,
+  library::NumericTypeID type,
+  library::LayoutTypeID layout_id,
+  std::vector<int> const &extent,
+  std::vector<int64_t> const &stride,
+  int batch_count,
+  int seed_shift,
+  size_t device_index) {
+
+  DeviceAllocation *allocation =
+      allocate_tensor(options, name, type, layout_id, extent, stride,
+                      batch_count, device_index);
 
   if (options.initialization.enabled) {
-    Distribution data_distribution = options.initialization.data_distribution; 
+    Distribution data_distribution = options.initialization.data_distribution;
 
     // check if data distribution is allowed to change
     if(!options.initialization.fix_data_distribution) {
@@ -130,13 +139,13 @@ DeviceAllocation *DeviceContext::allocate_tensor(
       double stddev = data_distribution.gaussian.stddev;
       int scale = data_distribution.int_scale;
 
-      if (name == "A" && data_distribution.gaussian.pnzA != 100.0) {
+      if (name == "A" && data_distribution.gaussian.pnzA != 1.0) {
         data_distribution.set_gaussian(mean, stddev, scale, data_distribution.gaussian.pnzA);
       }
-      else if (name == "B" && data_distribution.gaussian.pnzB != 100.0) {
+      else if (name == "B" && data_distribution.gaussian.pnzB != 1.0) {
         data_distribution.set_gaussian(mean, stddev, scale, data_distribution.gaussian.pnzB);
       }
-      else if (name == "C" && data_distribution.gaussian.pnzC != 100.0) {
+      else if (name == "C" && data_distribution.gaussian.pnzC != 1.0) {
         data_distribution.set_gaussian(mean, stddev, scale, data_distribution.gaussian.pnzC);
       }
     }
@@ -148,7 +157,7 @@ DeviceAllocation *DeviceContext::allocate_tensor(
       }
       else {
         allocation->initialize_random_device(
-          options.initialization.seed + seed_shift, 
+          options.initialization.seed + seed_shift,
           data_distribution);
       }
     }
@@ -159,7 +168,7 @@ DeviceAllocation *DeviceContext::allocate_tensor(
       }
       else {
         allocation->initialize_random_host(
-          options.initialization.seed + seed_shift, 
+          options.initialization.seed + seed_shift,
           data_distribution);
       }
     }
@@ -168,20 +177,22 @@ DeviceAllocation *DeviceContext::allocate_tensor(
   return allocation;
 }
 
-/// Allocates memory for sparse meta data 
-DeviceAllocation *DeviceContext::allocate_sparsemeta_tensor(
+/// Allocates memory for sparse meta data
+DeviceAllocation *DeviceContext::allocate_and_initialize_sparsemeta_tensor(
   Options const &options,
   std::string const &name,
-  library::NumericTypeID type, 
-  library::LayoutTypeID layout_id, 
+  library::NumericTypeID type,
+  library::LayoutTypeID layout_id,
   library::NumericTypeID type_a,
-  std::vector<int> const &extent, 
+  std::vector<int> const &extent,
   std::vector<int64_t> const &stride,
   int batch_count,
-  int seed_shift) {
+  int seed_shift,
+  size_t device_index) {
 
-  DeviceAllocation *allocation = 
-    allocate_tensor(name, type, layout_id, extent, stride, batch_count);
+  DeviceAllocation *allocation =
+      allocate_tensor(options, name, type, layout_id, extent, stride,
+                      batch_count, device_index);
 
   if (options.initialization.enabled) {
     // TF32 has 4bit meta data.  The rest has 2bit.
@@ -189,12 +200,12 @@ DeviceAllocation *DeviceContext::allocate_sparsemeta_tensor(
 
     if (options.initialization.provider == library::Provider::kReferenceDevice) {
       allocation->initialize_random_sparsemeta_device(
-        options.initialization.seed + seed_shift, 
+        options.initialization.seed + seed_shift,
         MetaSizeInBits);
     }
     else if (options.initialization.provider == library::Provider::kReferenceHost) {
       allocation->initialize_random_sparsemeta_host(
-        options.initialization.seed + seed_shift, 
+        options.initialization.seed + seed_shift,
         MetaSizeInBits);
     }
   }

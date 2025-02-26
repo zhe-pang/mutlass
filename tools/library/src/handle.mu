@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -327,7 +327,7 @@ static Operation const * find_gemm_operation(
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Exemutes a GEMM computation: D <= alpha * A*B + beta * C
+/// Executes a GEMM computation: D <= alpha * A*B + beta * C
 Status Handle::gemm(
 
   int M,                                    /// GEMM M dimension
@@ -481,7 +481,7 @@ Status Handle::gemm(
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Exemutes a GEMM computation: D <= alpha * A*B + beta * C.
+/// Executes a GEMM computation: D <= alpha * A*B + beta * C.
 //
 // Supports batched-strided, batched array or split-K serial or split-K parallel.
 //

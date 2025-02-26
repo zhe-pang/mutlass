@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -36,8 +36,8 @@
 #include <string>
 
 #define MUTLASS_MAJOR 0
-#define MUTLASS_MINOR 1
-#define MUTLASS_PATCH 1
+#define MUTLASS_MINOR 2
+#define MUTLASS_PATCH 0
 
 #ifdef MUTLASS_VERSIONS_GENERATED
 #include "mutlass/version_extended.h"

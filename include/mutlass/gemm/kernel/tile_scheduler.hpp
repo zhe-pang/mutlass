@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -37,6 +37,7 @@
 */
 
 #include "mutlass/detail/dependent_false.hpp"
+#include "mutlass/gemm/kernel/static_tile_scheduler.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -53,6 +54,8 @@ struct PersistentScheduler { };
 struct StreamKScheduler { };
 
 struct GroupScheduler { }; // Only used for Grouped GEMMs
+
+struct DefaultScheduler { };
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -76,6 +79,42 @@ template <
 struct TileSchedulerSelector {
   static_assert(mutlass::detail::dependent_false<ArchTag>,
       "Could not select a tile scheduler for given parameters.");
+};
+
+template <
+  class TileShape,
+  class ClusterShape,
+  class ProblemShapeType
+>
+struct TileSchedulerSelector <
+  void,
+  arch::Mp31,
+  TileShape,
+  ClusterShape,
+  ProblemShapeType
+> {
+  using Scheduler = typename TileSchedulerSelector<
+    DefaultScheduler,
+    arch::Mp31,
+    TileShape,
+    ClusterShape,
+    ProblemShapeType
+  >::Scheduler;
+};
+
+template <
+  class TileShape,
+  class ClusterShape,
+  class ProblemShapeType
+>
+struct TileSchedulerSelector <
+  DefaultScheduler,
+  arch::Mp31,
+  TileShape,
+  ClusterShape,
+  ProblemShapeType
+> {
+  using Scheduler = StaticTileScheduler;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

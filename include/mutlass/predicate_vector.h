@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -36,12 +36,13 @@
 #pragma once
 
 #if defined(__MUSACC_RTC__)
-#include <musa/std/cassert>
 #include <musa/std/cstdint>
 #else
 #include <assert.h>
 #include <stdint.h>
 #endif
+
+#include <musa/std/cassert>
 
 #include "mutlass/mutlass.h"
 

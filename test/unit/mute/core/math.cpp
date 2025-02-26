@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -34,6 +34,8 @@
 
 #include <mutlass/trace.h>
 #include <mute/numeric/integral_constant.hpp>
+#include <mute/swizzle.hpp>
+#include <mute/swizzle_layout.hpp>
 #include <mute/numeric/math.hpp>
 #include <mute/util/type_traits.hpp>
 
@@ -122,5 +124,13 @@ TEST(MuTe_core, lcm_returns_common_type)
   {
     constexpr auto result = mute::lcm(one, one);
     static_assert(int(result) == 1);
+  }
+}
+
+TEST(MuTe_core, max_alignment)
+{
+  {
+    constexpr auto swizzle = mute::Swizzle<3,4,3>{};
+    static_assert(mute::max_alignment(swizzle) == 1 << 4);
   }
 }

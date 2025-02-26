@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -39,7 +39,7 @@ namespace mute
 {
 
 /// MUTE helper to cast SMEM pointer to unsigned
-MUTE_DEVICE
+MUTE_HOST_DEVICE
 uint32_t
 cast_smem_ptr_to_uint(void const* const ptr)
 {
@@ -174,6 +174,28 @@ explode(Fn fn,
 {
   return fn(d[Id]..., a[Ia]..., b[Ib]..., c[Ic]..., sfa[Isfa]..., sfb[Isfb]...);
 }
+
+template <class Fn,
+          class PtrD, int... Id,
+          class PtrA, int... Ia,
+          class PtrB, int... Ib,
+          class PtrC, int... Ic,
+          class PtrE, int... Ie,
+          class PtrF, int... If,
+          class PtrG, int... Ig>
+MUTE_HOST_DEVICE constexpr
+void
+explode(Fn fn,
+        PtrD&& d, int_sequence<Id...>,
+        PtrA&& a, int_sequence<Ia...>,
+        PtrB&& b, int_sequence<Ib...>,
+        PtrC&& c, int_sequence<Ic...>,
+        PtrE&& e, int_sequence<Ie...>,
+        PtrF&& f, int_sequence<If...>,
+        PtrG&& g, int_sequence<Ig...>)
+{
+  return fn(d[Id]..., a[Ia]..., b[Ib]..., c[Ic]..., e[Ie]..., f[If]..., g[Ig]...);
+}
 //
 // Utility for exploding tuples into functions
 //
@@ -212,6 +234,22 @@ explode_tuple(Fn fn,
               TupleC&& c, int_sequence<Ic...>)
 {
   return fn(get<Ia>(a)..., get<Ib>(b)..., get<Ic>(c)...);
+}
+
+template <class Fn,
+          class TupleA, int... Ia,
+          class TupleB, int... Ib,
+          class TupleC, int... Ic,
+          class TupleD, int... Id>
+MUTE_HOST_DEVICE constexpr
+void
+explode_tuple(Fn fn,
+              TupleA&& a, int_sequence<Ia...>,
+              TupleB&& b, int_sequence<Ib...>,
+              TupleC&& c, int_sequence<Ic...>,
+              TupleD&& d, int_sequence<Id...>)
+{
+  return fn(get<Ia>(a)..., get<Ib>(b)..., get<Ic>(c)..., get<Id>(d)...);
 }
 
 } // end namespace detail

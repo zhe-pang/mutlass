@@ -1,4 +1,4 @@
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -27,8 +27,27 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-mutlass_test_unit_add_executable(
+add_custom_target(
   mutlass_test_unit_gemm_device
+  DEPENDS
+  mutlass_test_unit_gemm_device_mp22
+  mutlass_test_unit_gemm_device_mp31
+)
+
+add_custom_target(
+  test_unit_gemm_device
+  DEPENDS
+  test_unit_gemm_device_mp22
+  test_unit_gemm_device_mp31
+)
+
+mutlass_test_unit_add_executable(
+  mutlass_test_unit_gemm_device_mp22
   mp22_gemm_f32_f32_f32_simt.mu
   mp22_gemm_tensorop.mu
+)
+
+mutlass_test_unit_add_executable(
+  mutlass_test_unit_gemm_device_mp31
+  mp31_gemm_sqmma_ss.mu
 )

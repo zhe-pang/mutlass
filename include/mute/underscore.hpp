@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,12 +31,9 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mute/config.hpp>
-
-#include <mute/container/tuple.hpp>
-#include <mute/algorithm/tuple_algorithms.hpp>
-#include <mute/numeric/integral_constant.hpp>
-#include <mute/numeric/integer_sequence.hpp>
+#include <mute/config.hpp>                     // MUTE_INLINE_CONSTANT, MUTE_HOST_DEVICE
+#include <mute/container/tuple.hpp>            // mute::is_tuple
+#include <mute/numeric/integral_constant.hpp>  // mute::false_type, mute::true_type
 
 namespace mute
 {

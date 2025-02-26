@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -149,104 +149,118 @@ constexpr auto mp22_mma_operation_select()
   }
 }
 
-// Attempts to compute a proper permute layout for Simt TiledMma or allows the user to provide one.
-template <class PermuteLayoutType, class AtomLayout, class ElementA, class ElementB, class TileShape>
+template <
+  class TileShape_MNK,
+  class ElementA,
+  class ElementB,
+  class ElementAccumulator>
 constexpr auto
-simt_compute_tiled_mma_permute_layout_or_override() {
-  if constexpr (mute::is_same_v<PermuteLayoutType, PermuteLayoutAuto>) {
-    constexpr int AtomShapeM = size<0>(AtomLayout{});
-    constexpr int AtomShapeN = size<1>(AtomLayout{});
+mp22_make_simt_tiled_mma() {
+  static_assert(sizeof(ElementA) == 4 && sizeof(ElementB) == 4);
+  static_assert(sizeof(ElementAccumulator) == 4);
 
-    constexpr int ValueLayoutM = mute::min(128 / mute::sizeof_bits_v<ElementA> * AtomShapeM,
-                                           size<0>(TileShape{})) / AtomShapeM;
+  constexpr int TileM = size<0>(TileShape_MNK{});
+  constexpr int TileN = size<1>(TileShape_MNK{});
+  constexpr int TileK = size<2>(TileShape_MNK{});
 
-    constexpr int ValueLayoutN = mute::min(128 / mute::sizeof_bits_v<ElementB> * AtomShapeN,
-                                           size<1>(TileShape{})) / AtomShapeN;
+  constexpr int MaxAccumPerThread = 64;
+  constexpr int MaxFmaInstInHotloop = 256;
+  constexpr int PreferedLdsWidth = 4;
 
-    static_assert(size<2>(AtomLayout{}) == 1, "Unsupported Slice-K TiledMma");
-    using PermuteLayoutK = X;
+  constexpr int ThreadCountForOccupancy = mute::max(TileM * TileN / MaxAccumPerThread, NumThreadsPerWarpBeforeMP31);
+  constexpr int ThreadCount =
+    ThreadCountForOccupancy * mute::max(TileM * TileN * TileK / (ThreadCountForOccupancy * MaxFmaInstInHotloop), 1);
 
-    using ShapeM0 = Int<size<0>(AtomLayout{})>;
-    using ShapeM1 = Int<ValueLayoutM>;
+  constexpr int MaxLdsTile = ThreadCount == 512 ? 128 : 64;
+  static_assert(ThreadCount * PreferedLdsWidth <= (TileM * TileN), "Too small tile shape");
+  if constexpr (TileM > TileN) {
+    constexpr int ThreadAtomM = TileM > MaxLdsTile ? (MaxLdsTile / PreferedLdsWidth) : (TileM / PreferedLdsWidth);
+    constexpr int ThreadAtomN = ThreadCount / ThreadAtomM;
+    constexpr int ValueN = (TileN / ThreadAtomN) > PreferedLdsWidth ? PreferedLdsWidth : (TileN / ThreadAtomN);
 
-    using StrideM0 = Int<ValueLayoutM>;
-    using StrideM1 = _1;
+    using AtomLayout = Layout<Shape<Int<ThreadAtomM>, Int<ThreadAtomN>, _1>>;
+    using PermuteLayout = mute::Tile<
+            Layout<Shape<Int<ThreadAtomM>, Int<PreferedLdsWidth>>, Stride<          Int<ValueN>, _1>>,
+            Layout<Shape<Int<ThreadAtomN>,           Int<ValueN>>, Stride<Int<PreferedLdsWidth>, _1>>,
+            X>;
 
-    using PermuteLayoutM = Layout<Shape < ShapeM0,  ShapeM1>,
-                                  Stride<StrideM0, StrideM1>>;
+    return TiledMMA<MMA_Atom<UniversalFMA<
+                                ElementAccumulator,
+                                ElementA,
+                                ElementB,
+                                ElementAccumulator>>,
+                    AtomLayout, PermuteLayout>{};
+  } else {
+    constexpr int ThreadAtomN = TileN > MaxLdsTile ? (MaxLdsTile / PreferedLdsWidth) : (TileN / PreferedLdsWidth);
+    constexpr int ThreadAtomM = ThreadCount / ThreadAtomN;
+    constexpr int ValueM = (TileM / ThreadAtomM) > PreferedLdsWidth ? PreferedLdsWidth : (TileM / ThreadAtomM);
+    using AtomLayout = Layout<Shape<Int<ThreadAtomM>, Int<ThreadAtomN>, _1>>;
 
-    using ShapeN0 = Int<size<1>(AtomLayout{})>;
-    using ShapeN1 = Int<ValueLayoutN>;
+    using PermuteLayout = mute::Tile<
+            Layout<Shape<Int<ThreadAtomM>,           Int<ValueM>>, Stride<          Int<ValueM>, _1>>,
+            Layout<Shape<Int<ThreadAtomN>, Int<PreferedLdsWidth>>, Stride<Int<PreferedLdsWidth>, _1>>,
+            X>;
 
-    using StrideN0 = Int<ValueLayoutN>;
-    using StrideN1 = _1;
-
-    using PermuteLayoutN = Layout<Shape < ShapeN0,  ShapeN1>,
-                                  Stride<StrideN0, StrideN1>>;
-
-    return Tile<PermuteLayoutM, PermuteLayoutN, PermuteLayoutK>{};
-  }
-  else if constexpr (mute::is_tuple<PermuteLayoutType>::value) {
-    static_assert(rank(PermuteLayoutType{}) == 3, "PermuteLayout's rank should be 3");
-    return PermuteLayoutType{};
-  }
-  else {
-    static_assert(mutlass::detail::dependent_false<PermuteLayoutType>, "Invalid type for PermuteLayoutType.");
+    return TiledMMA<MMA_Atom<UniversalFMA<
+                                ElementAccumulator,
+                                ElementA,
+                                ElementB,
+                                ElementAccumulator>>,
+                    AtomLayout, PermuteLayout>{};
   }
 }
 
-// Attempts to compute a proper permute layout for TensorOp TiledMma or allows the user to provide one.
-template <class PermuteLayoutType, class AtomLayout, class MmaOp, class TileShape>
+template <class TileShape_MNK, class MmaOp>
 constexpr auto
-mp22_compute_tiled_mma_permute_layout_or_override() {
-  if constexpr (mute::is_same_v<PermuteLayoutType, PermuteLayoutAuto>) {
-    constexpr int ThreadsCount   = size(TiledMMA<MMA_Atom<MmaOp>, AtomLayout>{});
-    constexpr int MmaAtomThreads = size(typename MMA_Traits<MmaOp>::ThrID{});
-    constexpr int MmaOpShapeM    = size<0>(typename MMA_Traits<MmaOp>::Shape_MNK{});
-    constexpr int MmaOpShapeN    = size<1>(typename MMA_Traits<MmaOp>::Shape_MNK{});
+mp22_make_tensorop_tiled_mma() {
+  constexpr int TileM = size<0>(TileShape_MNK{});
+  constexpr int TileN = size<1>(TileShape_MNK{});
 
-    constexpr int ValueLayoutM   = mute::min(128, size<0>(TileShape{})) / MmaOpShapeM;
-    constexpr int ValueLayoutN   = mute::min(128, size<1>(TileShape{})) / MmaOpShapeN;
+  constexpr int MmaOpShapeM = size<0>(typename MMA_Traits<MmaOp>::Shape_MNK{});
+  constexpr int MmaOpShapeN = size<1>(typename MMA_Traits<MmaOp>::Shape_MNK{});
 
-    // Don't need to permute TiledMma
-    if constexpr (ThreadsCount == MmaAtomThreads) {
-      return Tile<X, X, X>{};
-    } else {
-      static_assert(size<2>(AtomLayout{}) == 1, "Unsupported Slice-K TiledMma");
-      using PermuteLayoutK = X;
+  static_assert(TileM % MmaOpShapeM == 0 && TileN % MmaOpShapeN == 0, "Invalid TileShape");
 
-      using ShapeM0 = Int<MmaOpShapeM>;
-      using ShapeM1 = Int<size<0>(AtomLayout{})>;
-      using ShapeM2 = Int<ValueLayoutM>;
+  constexpr int MaxWarpTile = 128;
 
-      using StrideM0 = _1;
-      using StrideM1 = Int<MmaOpShapeM * ValueLayoutM>;
-      using StrideM2 = Int<MmaOpShapeM>;
+  constexpr int ValueLayoutM = mute::min(MaxWarpTile, TileM) / MmaOpShapeM;
+  constexpr int ValueLayoutN = mute::min(MaxWarpTile, TileN) / MmaOpShapeN;
 
-      using PermuteLayoutM = Layout<Shape < ShapeM0,  ShapeM1,  ShapeM2>,
-                                    Stride<StrideM0, StrideM1, StrideM2>>;
+  constexpr int AtomTileM = ValueLayoutM * MmaOpShapeM;
+  constexpr int AtomTileN = ValueLayoutN * MmaOpShapeN;
 
-      using ShapeN0 = Int<MmaOpShapeN>;
-      using ShapeN1 = Int<size<1>(AtomLayout{})>;
-      using ShapeN2 = Int<ValueLayoutN>;
+  constexpr int AtomExtendM = TileM / AtomTileM;
+  constexpr int AtomExtendN = TileN / AtomTileN;
 
-      using StrideN0 = _1;
-      using StrideN1 = Int<MmaOpShapeN * ValueLayoutN>;
-      using StrideN2 = Int<MmaOpShapeN>;
+  using AtomLayout = decltype(make_layout(Shape<Int<AtomExtendM>, Int<AtomExtendN>, _1>{}, LayoutLeft{}));
 
-      using PermuteLayoutN = Layout<Shape < ShapeN0,  ShapeN1,  ShapeN2>,
-                                    Stride<StrideN0, StrideN1, StrideN2>>;
+  using PermuteLayoutK = X;
 
-      return Tile<PermuteLayoutM, PermuteLayoutN, PermuteLayoutK>{};
-    }
-  }
-  else if constexpr (mute::is_tuple<PermuteLayoutType>::value) {
-    static_assert(rank(PermuteLayoutType{}) == 3, "PermuteLayout's rank should be 3");
-    return PermuteLayoutType{};
-  }
-  else {
-    static_assert(mutlass::detail::dependent_false<PermuteLayoutType>, "Invalid type for PermuteLayoutType.");
-  }
+  using ShapeM0 = Int<MmaOpShapeM>;
+  using ShapeM1 = Int<size<0>(AtomLayout{})>;
+  using ShapeM2 = Int<ValueLayoutM>;
+
+  using StrideM0 = _1;
+  using StrideM1 = Int<MmaOpShapeM * ValueLayoutM>;
+  using StrideM2 = Int<MmaOpShapeM>;
+
+  using PermuteLayoutM = Layout<Shape < ShapeM0,  ShapeM1,  ShapeM2>,
+                                Stride<StrideM0, StrideM1, StrideM2>>;
+
+  using ShapeN0 = Int<MmaOpShapeN>;
+  using ShapeN1 = Int<size<1>(AtomLayout{})>;
+  using ShapeN2 = Int<ValueLayoutN>;
+
+  using StrideN0 = _1;
+  using StrideN1 = Int<MmaOpShapeN * ValueLayoutN>;
+  using StrideN2 = Int<MmaOpShapeN>;
+
+  using PermuteLayoutN = Layout<Shape < ShapeN0,  ShapeN1,  ShapeN2>,
+                                Stride<StrideN0, StrideN1, StrideN2>>;
+
+  using PermuteLayout = mute::Tile<PermuteLayoutM, PermuteLayoutN, PermuteLayoutK>;
+
+  return TiledMMA<MMA_Atom<MmaOp>, AtomLayout, PermuteLayout>{};
 }
 
 } // namespace detail
@@ -263,8 +277,6 @@ template <
   class ElementAccumulator,
   class TileShape_MNK,
   class ClusterShape_MNK,
-  class AtomLayout,
-  class PermuteLayoutType,
   class StageCountType,
   class KernelScheduleType
 >
@@ -280,8 +292,6 @@ struct CollectiveBuilder<
   ElementAccumulator,
   TileShape_MNK,
   ClusterShape_MNK,
-  AtomLayout,
-  PermuteLayoutType,
   StageCountType,
   KernelScheduleType
 > {
@@ -292,25 +302,14 @@ struct CollectiveBuilder<
   static constexpr int BlockN = shape<1>(TileShape_MNK{});
   static constexpr int BlockK = shape<2>(TileShape_MNK{});
 
-  static_assert(BlockM % shape<0>(AtomLayout{}) == 0 && BlockN % shape<1>(AtomLayout{})==0,
-                "AtomLayoutM/N need be divisible by BlockM/N");
-
-  using PermuteLayout = decltype(detail::simt_compute_tiled_mma_permute_layout_or_override<
-                              PermuteLayoutType, AtomLayout, ElementA, ElementB, TileShape_MNK>());
-
-  using TiledMma = TiledMMA<MMA_Atom<UniversalFMA<
-                                        ElementAccumulator,
-                                        ElementA,
-                                        ElementB,
-                                        ElementAccumulator>>,
-                            AtomLayout, PermuteLayout>;
+  using TiledMma = decltype(detail::mp22_make_simt_tiled_mma<TileShape_MNK, ElementA, ElementB, ElementAccumulator>());
 
   static constexpr int ThreadCount = size(TiledMma{});
-  using GmemTiledCopyA = decltype(detail::make_gmem_tiled_copy<
+  using GmemTiledCopyA = decltype(detail::make_simt_tiled_copy<
                                     ThreadCount, ElementA, AlignmentA, TagToStrideA_t<GmemLayoutA>,
                                     BlockM, BlockK,
                                     UniversalCopy<uint_bit_t<AlignmentA*sizeof_bits_v<ElementA>>>>());
-  using GmemTiledCopyB = decltype(detail::make_gmem_tiled_copy<
+  using GmemTiledCopyB = decltype(detail::make_simt_tiled_copy<
                                     ThreadCount, ElementB, AlignmentB, TagToStrideB_t<GmemLayoutB>,
                                     BlockN, BlockK,
                                     UniversalCopy<uint_bit_t<AlignmentB*sizeof_bits_v<ElementB>>>>());
@@ -344,8 +343,6 @@ template <
   class ElementAccumulator,
   class TileShape_MNK,
   class ClusterShape_MNK,
-  class AtomLayout,
-  class PermuteLayoutType,
   class StageCountType,
   class KernelScheduleType
 >
@@ -361,8 +358,6 @@ struct CollectiveBuilder<
   ElementAccumulator,
   TileShape_MNK,
   ClusterShape_MNK,
-  AtomLayout,
-  PermuteLayoutType,
   StageCountType,
   KernelScheduleType
 > {
@@ -382,24 +377,21 @@ struct CollectiveBuilder<
 
   using MmaOp = decltype(detail::mp22_mma_operation_select<MmaElementA, StrideA, MmaElementB, StrideB>());
 
-  using PermuteLayout = decltype(detail::mp22_compute_tiled_mma_permute_layout_or_override<
-                              PermuteLayoutType, AtomLayout, MmaOp, TileShape_MNK>());
-
-  using TiledMma = TiledMMA<MMA_Atom<MmaOp>, AtomLayout, PermuteLayout>;
+  using TiledMma = decltype(detail::mp22_make_tensorop_tiled_mma<TileShape_MNK, MmaOp>());
 
   static constexpr int ThreadCount = size(TiledMma{});
 
   // A
   using SmemLayoutAtomA = decltype(detail::make_mp22_smem_atom_layout<MmaElementA, StrideA>());
   using SmemCopyAtomA = Copy_Atom<DefaultCopy, MmaElementA>;
-  using GmemTiledCopyA = decltype(detail::make_gmem_tiled_copy<
+  using GmemTiledCopyA = decltype(detail::make_simt_tiled_copy<
                                     ThreadCount, MmaElementA, AlignmentA, StrideA,
                                     BlockM, BlockK,
                                     UniversalCopy<uint_bit_t<AlignmentA*sizeof_bits_v<MmaElementA>>>>());
   // B
   using SmemLayoutAtomB = decltype(detail::make_mp22_smem_atom_layout<MmaElementB, StrideB>());
   using SmemCopyAtomB = Copy_Atom<DefaultCopy, MmaElementB>;
-  using GmemTiledCopyB = decltype(detail::make_gmem_tiled_copy<
+  using GmemTiledCopyB = decltype(detail::make_simt_tiled_copy<
                                     ThreadCount, MmaElementB, AlignmentB, StrideB,
                                     BlockN, BlockK,
                                     UniversalCopy<uint_bit_t<AlignmentB*sizeof_bits_v<MmaElementB>>>>());

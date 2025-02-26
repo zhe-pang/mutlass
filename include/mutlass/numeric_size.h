@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -66,6 +66,15 @@ MUTLASS_CONSTEXPR_IF_CXX17
 int
 bits_to_bytes(int bits) {
   return (bits + 7) / 8;
+}
+
+/// Returns the number of bits required to hold a specified number of bytes
+template <class R = int, class T>
+MUTLASS_HOST_DEVICE
+constexpr
+R
+bytes_to_bits(T bytes) {
+  return R(bytes) * R(8);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

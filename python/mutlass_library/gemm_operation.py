@@ -1,6 +1,6 @@
 #################################################################################################
 #
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -210,7 +210,7 @@ class GemmOperation:
   def procedural_name(self):
     ''' The full procedural name indicates architecture, extended name, tile size, and layout. '''
     opcode_class_name = OpcodeClassNames[self.tile_description.math_instruction.opcode_class]
-    kernel_name_template = "mutlass{p}_mp{ar}_{op}_{ex}_{tbm}x{tbn}x{tbk}_{s}_align{al}"
+    kernel_name_template = "mutlass{p}_mp{ar}_{op}_{ex}_{tbm}x{tbn}x{tbk}_{l}_{s}_align{al}{t}{k}{e}"
     return kernel_name_template.format(
         p = self.prefix,
         ar = self.arch,
@@ -219,8 +219,12 @@ class GemmOperation:
         tbm = self.tile_description.tile_shape[0],
         tbn = self.tile_description.tile_shape[1],
         tbk = self.tile_description.tile_shape[2],
+        l = self.tile_description.stages,
         s = self.layout_name_3x(),
         al = str(max(self.A.alignment, self.B.alignment)),
+        t = TileSchedulerSuffixes[self.tile_scheduler],
+        k = self.kernel_schedule_name_3x(),
+        e = self.epilogue_schedule_name_3x()
       )
 
   #
@@ -288,6 +292,20 @@ class EmitGemmUniversal3xInstance:
 """
     self.gemm_template = """
 
+using ${operation_name}_mainloop =
+  typename mutlass::gemm::collective::CollectiveBuilder<
+    ${arch}, ${opcode_class_main},
+    ${element_a}, ${layout_a}, ${align_a},
+    ${element_b}, ${layout_b}, ${align_b},
+    ${element_accumulator},
+    mute::Shape<mute::_${tile_shape_m}, mute::_${tile_shape_n}, mute::_${tile_shape_k}>,
+    mute::Shape<mute::_${cluster_m},mute::_${cluster_n},mute::_${cluster_k}>,
+    ${stages},
+    ${kernel_schedule}
+  >::CollectiveOp;
+
+using ThreadEpilogueOp = mutlass::epilogue::fusion::LinearCombination<${element_d},${element_accumulator},${element_c},${element_accumulator}>;
+
 using ${operation_name}_epilogue =
   typename mutlass::epilogue::collective::CollectiveBuilder<
     ${arch}, ${opcode_class_epi},
@@ -297,23 +315,9 @@ using ${operation_name}_epilogue =
     ${element_accumulator}, ${element_epilogue},
     ${element_c}, ${layout_c}, ${align_c},
     ${element_d}, ${layout_d}, ${align_d},
-    ${epilogue_schedule}
-  >::CollectiveOp;
-
-using ${operation_name}_mainloop =
-  typename mutlass::gemm::collective::CollectiveBuilder<
-    ${arch}, ${opcode_class_main},
-    ${element_a}, ${layout_a}, ${align_a},
-    ${element_b}, ${layout_b}, ${align_b},
-    ${element_accumulator},
-    mute::Shape<mute::_${tile_shape_m}, mute::_${tile_shape_n}, mute::_${tile_shape_k}>,
-    mute::Shape<mute::_${cluster_m},mute::_${cluster_n},mute::_${cluster_k}>,
-    ${atom_layout},
-    mute::Tile<${permute_m},
-               ${permute_n},
-               ${permute_k}>,
-    ${stages},
-    ${kernel_schedule}
+    ${epilogue_schedule},
+    ThreadEpilogueOp,
+    ${operation_name}_mainloop
   >::CollectiveOp;
 
 // Gemm operator ${operation_name}
@@ -393,10 +397,6 @@ ${compile_guard_end}
       'cluster_m': str(operation.tile_description.cluster_shape[0]),
       'cluster_n': str(operation.tile_description.cluster_shape[1]),
       'cluster_k': str(operation.tile_description.cluster_shape[2]),
-      'atom_layout': str(LayoutToString(operation.tile_description.atom_layout)),
-      'permute_m': str(LayoutToString(operation.tile_description.permute[0])),
-      'permute_n': str(LayoutToString(operation.tile_description.permute[1])),
-      'permute_k': str(LayoutToString(operation.tile_description.permute[2])),
       'instruction_shape_m': str(operation.tile_description.math_instruction.instruction_shape[0]),
       'instruction_shape_n': str(operation.tile_description.math_instruction.instruction_shape[1]),
       'instruction_shape_k': str(operation.tile_description.math_instruction.instruction_shape[2]),

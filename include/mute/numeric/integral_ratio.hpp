@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,11 +31,11 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mute/config.hpp>
-
-#include <mute/util/type_traits.hpp>
-#include <mute/numeric/math.hpp>
 #include <mute/numeric/integral_constant.hpp>
+#include <mute/config.hpp>                     // MUTE_HOST_DEVICE
+#include <mute/numeric/integral_constant.hpp>  // mute::false_type, mute::true_type
+#include <mute/numeric/math.hpp>               // mute::signum
+#include <mute/util/type_traits.hpp>           // __MUTE_REQUIRES
 
 namespace mute
 {
@@ -156,13 +156,6 @@ operator*(C<c>, R<a,b>) {
   return {};
 }
 
-template <auto c, auto a, auto b>
-MUTE_HOST_DEVICE constexpr
-typename R<c*b,a>::type
-operator/(C<c>, R<a,b>) {
-  return {};
-}
-
 // Product with dynamic type needs to produce an integer...
 template <class C, auto a, auto b,
           __MUTE_REQUIRES(mute::is_std_integral<C>::value)>
@@ -179,6 +172,13 @@ MUTE_HOST_DEVICE constexpr
 auto
 operator*(R<a,b>, C const& c) {
   return c * R<a,b>::num / R<a,b>::den;
+}
+
+template <class C, auto a, auto b>
+MUTE_HOST_DEVICE constexpr
+auto
+operator/(C const& c, R<a,b>) {
+  return c * R<b,a>{};
 }
 
 template <auto a, auto b, auto x, auto y>
@@ -202,6 +202,10 @@ operator+(C<c>, R<a,b>) {
   return {};
 }
 
+/////////////////
+// Comparisons //
+/////////////////
+
 template <auto a, auto b, auto x, auto y>
 MUTE_HOST_DEVICE constexpr
 bool_constant<R<a,b>::num == R<x,y>::num && R<a,b>::den == R<x,y>::den>
@@ -220,6 +224,31 @@ template <auto c, auto a, auto b>
 MUTE_HOST_DEVICE constexpr
 bool_constant<R<a,b>::num == c && R<a,b>::den == 1>
 operator==(C<c>, R<a,b>) {
+  return {};
+}
+
+///////////////////////
+// Special functions //
+///////////////////////
+
+template <auto a, auto b, auto x, auto y>
+MUTE_HOST_DEVICE constexpr
+typename R<gcd(a*y,b*x),b*x>::type
+gcd(R<a,b>, R<x,y>) {
+  return {};
+}
+
+template <auto a, auto b, auto c>
+MUTE_HOST_DEVICE constexpr
+typename R<gcd(a,b*c),b*c>::type
+gcd(R<a,b>, C<c>) {
+  return {};
+}
+
+template <auto c, auto a, auto b>
+MUTE_HOST_DEVICE constexpr
+typename R<gcd(a,b*c),b*c>::type
+gcd(C<c>, R<a,b>) {
   return {};
 }
 

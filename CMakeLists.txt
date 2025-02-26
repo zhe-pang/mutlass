@@ -1,4 +1,4 @@
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -63,7 +63,8 @@ project(MUTLASS VERSION ${_MUTLASS_VERSION_MAJOR}.${_MUTLASS_VERSION_MINOR}.${_M
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-list(APPEND MUTLASS_MUSA_MCC_FLAGS -std=c++17 -fno-strict-aliasing -Ofast)
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
+list(APPEND MUTLASS_MUSA_MCC_FLAGS -std=c++17 -fno-strict-aliasing -Od3)
 
 set(MUTLASS_TEST_LEVEL "0" CACHE STRING "Level of tests to compile.")
 
@@ -77,6 +78,7 @@ if(MUTLASS_ENABLE_HEADERS_ONLY)
   set(MUTLASS_ENABLE_TOOLS_INIT ON)
   set(MUTLASS_ENABLE_LIBRARY_INIT OFF)
   set(MUTLASS_ENABLE_TESTS_INIT OFF)
+  set(MUTLASS_ENABLE_EXPERIMENTAL_INIT OFF)
 else()
   set(MUTLASS_ENABLE_EXAMPLES_INIT ON)
   set(MUTLASS_ENABLE_TOOLS_INIT ON)
@@ -86,6 +88,7 @@ else()
   else()
     set(MUTLASS_ENABLE_TESTS_INIT OFF)
   endif()
+  set(MUTLASS_ENABLE_EXPERIMENTAL_INIT ON)
 endif()
 
 
@@ -93,13 +96,14 @@ set(MUTLASS_ENABLE_EXAMPLES ${MUTLASS_ENABLE_EXAMPLES_INIT} CACHE BOOL "Enable M
 set(MUTLASS_ENABLE_TOOLS ${MUTLASS_ENABLE_TOOLS_INIT} CACHE BOOL "Enable MUTLASS Tools")
 set(MUTLASS_ENABLE_LIBRARY ${MUTLASS_ENABLE_LIBRARY_INIT} CACHE BOOL "Enable MUTLASS Library")
 set(MUTLASS_ENABLE_PROFILER ${MUTLASS_ENABLE_LIBRARY} CACHE BOOL "Enable MUTLASS Profiler")
+set(MUTLASS_ENABLE_EXPERIMENTAL ${MUTLASS_ENABLE_EXPERIMENTAL_INIT} CACHE BOOL "Enable MUTLASS Experimental")
 
 set(MUTLASS_ENABLE_TESTS ${MUTLASS_ENABLE_TESTS_INIT} CACHE BOOL "Enable MUTLASS Tests")
 set(MUTLASS_ENABLE_GTEST_UNIT_TESTS ${MUTLASS_ENABLE_TESTS} CACHE BOOL "Enable MUTLASS GTest-based Unit Tests")
 ################################################################################
 
 set(MUTLASS_MCC_ARCHS_SUPPORTED "")
-list(APPEND MUTLASS_MCC_ARCHS_SUPPORTED 22)
+list(APPEND MUTLASS_MCC_ARCHS_SUPPORTED 22 31)
 set(MUTLASS_MCC_ARCHS ${MUTLASS_MCC_ARCHS_SUPPORTED} CACHE STRING "The MP architectures requested.")
 set(MUTLASS_MCC_ARCHS_ENABLED ${MUTLASS_MCC_ARCHS} CACHE STRING "The MP architectures to build code for.")
 
@@ -358,4 +362,9 @@ if (MUTLASS_ENABLE_TESTS)
   if (MUTLASS_ENABLE_GTEST_UNIT_TESTS)
     add_dependencies(test_all test_unit)
   endif()
+endif()
+
+if (MUTLASS_ENABLE_EXPERIMENTAL)
+  add_subdirectory(experimental)
+  add_dependencies(test_all test_experimental)
 endif()

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,16 +31,13 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mute/config.hpp>
-
-#include <mute/arch/copy.hpp>
-
-#include <mute/atom/copy_traits.hpp>
-#include <mute/atom/mma_atom.hpp>
-
-#include <mute/util/type_traits.hpp>
-
-#include <mute/tensor.hpp>
+#include <mute/config.hpp>                     // MUTE_HOST_DEVICE
+#include <mute/tensor.hpp>                     // mute::Tensor
+#include <mute/util/type_traits.hpp>           // mute::__MUTE_REQUIRES
+#include <mute/container/tuple.hpp>            // mute::is_tuple
+#include <mute/numeric/integral_constant.hpp>  // mute::is_constant, mute::is_integral
+#include <mute/atom/copy_traits.hpp>           // mute::Copy_Traits
+#include <mute/atom/mma_atom.hpp>              // mute::TiledMMA
 
 namespace mute
 {
@@ -104,16 +101,16 @@ struct Copy_Atom<Copy_Traits<Args...>, CopyInternalType>
     if constexpr (is_constant<NumValSrc, decltype(size(src))>::value ||
                   is_constant<NumValDst, decltype(size(dst))>::value) {
       // Dispatch to unpack to execute instruction
-      return copy_unpack(*this, src, dst);
-    } else
-    if constexpr (is_tuple<decltype(shape(src))>::value &&
-                  is_tuple<decltype(shape(dst))>::value) {
+      return copy_unpack(static_cast<Traits const&>(*this), src, dst);
+    } else if constexpr (is_tuple<decltype(shape(src))>::value &&
+                         is_tuple<decltype(shape(dst))>::value) {
       // If the size of the src/dst doesn't match the instruction,
       //   recurse this rank-1 layout by peeling off the mode
       //   ((A,B,C,...)) -> (A,B,C,...)
       return copy(*this, tensor<0>(src), tensor<0>(dst));
     } else {
-      static_assert(dependent_false<SEngine>, "No instruction match and no recursion possible.");
+      static_assert(dependent_false<SEngine>,
+                    "CopyAtom: Src/Dst partitioning does not match the instruction requirement.");
     }
   }
 
@@ -652,10 +649,12 @@ print(ThrCopy<TiledCopy, ThrIdx> const& thr_copy)
   print(TiledCopy{});
 }
 
-template <class... Args>
+// TiledCopy to LaTeX TikZ
+template <class... Args, class TikzColorFn = TikzColor_TV>
 MUTE_HOST_DEVICE
 auto
-print_latex(TiledCopy<Args...> const& copy)
+print_latex(TiledCopy<Args...> const& copy,
+            TikzColorFn color = {})
 {
   auto [layoutS_MN, thrID_S] = copy.get_layoutS_MN();
   auto [layoutD_MN, thrID_D] = copy.get_layoutD_MN();
@@ -664,13 +663,15 @@ print_latex(TiledCopy<Args...> const& copy)
                    layoutD_MN, thrID_D);
 }
 
-// MNK Copy Layout to Latex TIKZ -- 8-value color coded by thread
+// MNK Copy Layout to Latex TIKZ
 template <class LayoutS, class ThrIDS,
-          class LayoutD, class ThrIDD>
+          class LayoutD, class ThrIDD,
+          class TikzColorFn = TikzColor_TV>
 MUTE_HOST_DEVICE
 void
 print_latex_copy(LayoutS const& S, ThrIDS const& TS,  // (m,n) -> (tid,vid)  and  tid -> thr_idx
-                 LayoutD const& D, ThrIDD const& TD)  // (m,n) -> (tid,vid)  and  tid -> thr_idx
+                 LayoutD const& D, ThrIDD const& TD,  // (m,n) -> (tid,vid)  and  tid -> thr_idx
+                 TikzColorFn color = {})              // lambda(thr_idx,val_idx) -> tikz color string
 {
   MUTE_STATIC_ASSERT_V(rank(S) == Int<2>{});
   MUTE_STATIC_ASSERT_V(rank(D) == Int<2>{});
@@ -678,33 +679,17 @@ print_latex_copy(LayoutS const& S, ThrIDS const& TS,  // (m,n) -> (tid,vid)  and
   assert(size<0>(S) == size<0>(D));
   assert(size<1>(S) == size<1>(D));
 
-  char const* latex_header =
-      "\\documentclass{standalone}\n"
-      "\\usepackage{tikz}\n"
-      "\\usetikzlibrary{external}\n"
-      "\\tikzexternalize\n"
-      "\\begin{document}\n"
-      "\\begin{tikzpicture}[x={(0cm,-1cm)},y={(1cm,0cm)},box/.style={rectangle,draw=black,thick,minimum size=1cm,anchor=center}]\n\n";
-  char const* latex_footer =
-      "\\end{tikzpicture}\n"
-      "\\end{document}\n";
-
-  char const* color_map[8] = {"{rgb,255:red,175;green,175;blue,255}",
-                              "{rgb,255:red,175;green,255;blue,175}",
-                              "{rgb,255:red,255;green,255;blue,175}",
-                              "{rgb,255:red,255;green,175;blue,175}",
-                              "{rgb,255:red,210;green,210;blue,255}",
-                              "{rgb,255:red,210;green,255;blue,210}",
-                              "{rgb,255:red,255;green,255;blue,210}",
-                              "{rgb,255:red,255;green,210;blue,210}",};
-
-  // Header
+  // Commented prints
   printf("%% LayoutS: "); print(S);  printf("\n");
   printf("%% ThrIDS : "); print(TS); printf("\n");
   printf("%% LayoutD: "); print(D);  printf("\n");
   printf("%% ThrIDD : "); print(TD); printf("\n\n");
 
-  printf(latex_header);
+  // Header
+  printf("\\documentclass[convert]{standalone}\n"
+         "\\usepackage{tikz}\n\n"
+         "\\begin{document}\n"
+         "\\begin{tikzpicture}[x={(0cm,-1cm)},y={(1cm,0cm)},every node/.style={minimum size=1cm, outer sep=0pt}]\n\n");
 
   // S starting at 0,0
   for (int i = 0; i < size<0>(S); ++i) {
@@ -713,11 +698,21 @@ print_latex_copy(LayoutS const& S, ThrIDS const& TS,  // (m,n) -> (tid,vid)  and
       int val_idx = S(i,j) / size(TS);
       int thr_idx = TS(thrid);
 
-      printf("\\node[box,fill=%s] at (%d,%d) {\\shortstack{T%d \\\\ V%d}};\n",
-             color_map[thr_idx % 8],
+      printf("\\node[fill=%s] at (%d,%d) {\\shortstack{T%d \\\\ V%d}};\n",
+             color(thr_idx, val_idx),
              i, j,
              thr_idx, val_idx);
     }
+  }
+  // Grid
+  printf("\\draw[color=black,thick,shift={(-0.5,-0.5)}] (%d,%d) grid (%d,%d);\n\n",
+         0, 0, int(size<0>(S)), int(size<1>(S)));
+  // S Labels
+  for (int i =  0, j = -1; i < size<0>(S); ++i) {
+    printf("\\node at (%d,%d) {\\Large{\\texttt{%d}}};\n", i, j, i);
+  }
+  for (int i = -1, j =  0; j < size<1>(S); ++j) {
+    printf("\\node at (%d,%d) {\\Large{\\texttt{%d}}};\n", i, j, j);
   }
 
   // D starting at 0,size<1>(S)+3
@@ -727,32 +722,32 @@ print_latex_copy(LayoutS const& S, ThrIDS const& TS,  // (m,n) -> (tid,vid)  and
       int val_idx = D(i,j) / size(TD);
       int thr_idx = TD(thrid);
 
-      printf("\\node[box,fill=%s] at (%d,%d) {\\shortstack{T%d \\\\ V%d}};\n",
-             color_map[thr_idx % 8],
+      printf("\\node[fill=%s] at (%d,%d) {\\shortstack{T%d \\\\ V%d}};\n",
+             color(thr_idx, val_idx),
              i, j + size<1>(S) + 3,
              thr_idx, val_idx);
     }
   }
 
-  // S Labels
-  for (int i = 0, j = -1; i < size<0>(S); ++i) {
-    printf("\\node at (%d,%d) {\\Large{\\texttt{%d}}};\n", i, j, i);
-  }
-  for (int j = 0, i = -1; j < size<1>(S); ++j) {
-    printf("\\node at (%d,%d) {\\Large{\\texttt{%d}}};\n", i, j, j);
-  }
+  // Grid
+  printf("\\draw[color=black,thick,shift={(-0.5,-0.5)}] (%d,%d) grid (%d,%d);\n\n",
+         0, int(size<1>(S)+3), int(size<0>(D)), int(size<1>(D)+size<1>(S)+3));
   // D Labels
-  for (int i = 0, j = size<1>(D); i < size<0>(S); ++i) {
+  for (int i = 0, j = size<1>(D); i < size<0>(D); ++i) {
     printf("\\node at (%d,%d) {\\Large{\\texttt{%d}}};\n", i, j + size<1>(S) + 3, i);
   }
-  for (int j = 0, i = -1; j < size<1>(D); ++j) {
+  for (int i = -1, j =          0; j < size<1>(D); ++j) {
     printf("\\node at (%d,%d) {\\Large{\\texttt{%d}}};\n", i, j + size<1>(S) + 3, j);
   }
 
   // Footer
-  printf(latex_footer);
+  printf("\\end{tikzpicture}\n"
+         "\\end{document}\n");
 }
 
 } // end namespace mute
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include <mute/atom/copy_traits_mp31.hpp>
+#include <mute/atom/copy_traits_mp31_tme.hpp>

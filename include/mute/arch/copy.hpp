@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -40,7 +40,7 @@ namespace mute
 {
 
 //
-// Direct Copy for any type
+// Direct Copy for any specific types
 //
 
 template <class S, class D = S>
@@ -49,27 +49,21 @@ struct UniversalCopy
   using SRegisters = S[1];
   using DRegisters = D[1];
 
-  template <class S_, class D_>
-  MUTE_HOST_DEVICE static constexpr void
-  copy(S_ const& src,
-       D_      & dst)
-  {
-    dst = static_cast<D>(static_cast<S>(src));
-  }
+  // Sanity
+  static_assert(sizeof_bits_v<S> >= 8);
+  static_assert(sizeof_bits_v<D> >= 8);
 
-  // Accept mutable temporaries
-  template <class S_, class D_>
   MUTE_HOST_DEVICE static constexpr void
-  copy(S_ const& src,
-       D_     && dst)
+  copy(S const& src,
+       D      & dst)
   {
-    UniversalCopy<S,D>::copy(src, dst);
+    dst = src;
   }
 };
 
 //
 // Placeholder for the copy algorithm's stronger auto-vectorizing behavior
-//   that assumes alignment of dynamic layouts up to MaxVecBits
+//   that assumes alignment of pointers and dynamic layouts up to MaxVecBits
 //
 
 template <int MaxVecBits = 128>
@@ -81,13 +75,34 @@ struct AutoVectorizingCopyWithAssumedAlignment
 };
 
 //
-// Placeholder for the copy algorithm's default auto-vectorizing behavior
-//   that does not assume alignment of dynamic layouts
+// AutoVectorizingCopy alias assumes maximal alignment of pointers and dynamic strides.
+//   If this is not the case then AutoVectorizingCopyWithAssumedAlignment should be used instead
 //
 
-using AutoVectorizingCopy = AutoVectorizingCopyWithAssumedAlignment<8>;
+using AutoVectorizingCopy = AutoVectorizingCopyWithAssumedAlignment<128>;
 
-// Alias
-using DefaultCopy = AutoVectorizingCopy;
+//
+// DefaultCopy alias does not assume alignment of pointers or dynamic strides.
+//
+
+using DefaultCopy = AutoVectorizingCopyWithAssumedAlignment<8>;
+
+//
+// Copy policy automatically selecting between
+// UniversalCopy and cp.async , based on type and memory space.
+//
+struct AutoCopyAsync {};
+
+//
+// Global memory prefetch into L2
+//
+
+MUTE_HOST_DEVICE static void
+prefetch(void const* gmem_ptr)
+{
+#if defined(__MUSA_ARCH__) && (__MUSA_ARCH__ >= 310)
+  __musa_prefetch_only(gmem_ptr);
+#endif
+}
 
 } // end namespace mute

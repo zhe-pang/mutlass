@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -146,6 +146,8 @@ transform_apply(T&& t, F&& f, G&& g)
   } else {
     return g(f(static_cast<T&&>(t)));
   }
+
+  MUTE_GCC_UNREACHABLE;
 }
 
 template <class T0, class T1, class F, class G>
@@ -158,6 +160,8 @@ transform_apply(T0&& t0, T1&& t1, F&& f, G&& g)
   } else {
     return g(f(static_cast<T0&&>(t0), static_cast<T1&&>(t1)));
   }
+
+  MUTE_GCC_UNREACHABLE;
 }
 
 template <class T0, class T1, class T2, class F, class G>
@@ -170,6 +174,8 @@ transform_apply(T0&& t0, T1&& t1, T2&& t2, F&& f, G&& g)
   } else {
     return g(f(static_cast<T0&&>(t0), static_cast<T1&&>(t1), static_cast<T2&&>(t2)));
   }
+
+  MUTE_GCC_UNREACHABLE;
 }
 
 //
@@ -402,30 +408,23 @@ filter_tuple(T0 const& t0, T1 const& t1, T2 const& t2, F&& f)
 
 namespace detail {
 
-// This impl compiles much faster than mute::apply and variadic args
-template <class T, class V, class F>
-MUTE_HOST_DEVICE constexpr
-decltype(auto)
-fold(T&& t, V&& v, F&& f, seq<>)
-{
-  return static_cast<V&&>(v);
-}
-
-template <class T, class V, class F, int I, int... Is>
-MUTE_HOST_DEVICE constexpr
-decltype(auto)
-fold(T&& t, V&& v, F&& f, seq<I,Is...>)
-{
-  if constexpr (sizeof...(Is) == 0) {
-    return f(static_cast<V&&>(v), get<I>(static_cast<T&&>(t)));
-  } else {
-    return fold(static_cast<T&&>(t),
-                f(static_cast<V&&>(v), get<I>(static_cast<T&&>(t))),
-                f,
-                seq<Is...>{});
+template <class Fn, class Val>
+struct FoldAdaptor {
+  template <class X>
+  MUTE_HOST_DEVICE constexpr auto operator|(X&& x) {
+    auto r = fn_(val_, static_cast<X&&>(x));
+    return FoldAdaptor<Fn, decltype(r)>{fn_, r};
   }
+  Fn fn_;
+  Val val_;
+};
 
-  MUTE_GCC_UNREACHABLE;
+template <class T, class V, class F, int... Is>
+MUTE_HOST_DEVICE constexpr
+decltype(auto)
+fold(T&& t, V const& v, F&& f, seq<Is...>)
+{
+  return (FoldAdaptor<F,V>{f,v} | ... | get<Is>(static_cast<T&&>(t))).val_;
 }
 
 } // end namespace detail
@@ -433,15 +432,12 @@ fold(T&& t, V&& v, F&& f, seq<I,Is...>)
 template <class T, class V, class F>
 MUTE_HOST_DEVICE constexpr
 auto
-fold(T&& t, V&& v, F&& f)
+fold(T&& t, V const& v, F&& f)
 {
   if constexpr (is_tuple<remove_cvref_t<T>>::value) {
-    return detail::fold(static_cast<T&&>(t),
-                        static_cast<V&&>(v),
-                        f,
-                        tuple_seq<T>{});
+    return detail::fold(static_cast<T&&>(t), v, f, tuple_seq<T>{});
   } else {
-    return f(static_cast<V&&>(v), static_cast<T&&>(t));
+    return f(v, static_cast<T&&>(t));
   }
 
   MUTE_GCC_UNREACHABLE;
@@ -453,10 +449,7 @@ decltype(auto)
 fold_first(T&& t, F&& f)
 {
   if constexpr (is_tuple<remove_cvref_t<T>>::value) {
-    return detail::fold(static_cast<T&&>(t),
-                        get<0>(static_cast<T&&>(t)),
-                        f,
-                        make_range<1,tuple_size<remove_cvref_t<T>>::value>{});
+    return detail::fold(static_cast<T&&>(t), get<0>(t), f, make_range<1,tuple_size<remove_cvref_t<T>>::value>{});
   } else {
     return static_cast<T&&>(t);
   }
@@ -512,12 +505,22 @@ MUTE_HOST_DEVICE constexpr
 auto
 take(T const& t)
 {
-  return detail::apply(t, [](auto const&... a) { return mute::make_tuple(a...); }, make_range<B,E>{});
+  if constexpr (E == -1) {
+    if constexpr (is_tuple<T>::value) {
+      return take<B,tuple_size<T>::value>(t);
+    } else {
+      return take<B,1>(t);
+    }
+  } else if constexpr (B <= E) {
+    return detail::apply(t, [](auto const&... a) { return mute::make_tuple(a...); }, make_range<B,E>{});
+  } else {
+    static_assert(B <= E);
+  }
+
+  MUTE_GCC_UNREACHABLE;
 }
 
-//
 // Select tuple elements with given indices.
-//
 
 template <int... I, class T>
 MUTE_HOST_DEVICE constexpr
@@ -525,19 +528,6 @@ auto
 select(T const& t)
 {
   return mute::make_tuple(get<I>(t)...);
-}
-
-template <class T, class Indices>
-MUTE_HOST_DEVICE constexpr
-auto
-select(T const& t, Indices const& indices)
-{
-  if constexpr (is_tuple<Indices>::value) {
-    return mute::transform(indices, [&t](auto i) { return select(t, i); });
-  } else {
-    static_assert(is_static<Indices>::value, "Order must be static");
-    return get<Indices::value>(t);
-  }
 }
 
 // Wrap non-tuples into rank-1 tuples or forward

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,13 +31,8 @@
  **************************************************************************************************/
 #pragma once
 
-#include <vector_types.h>
-
-#include <mute/config.hpp>
-
-#include <mute/util/type_traits.hpp>
-#include <mute/numeric/integral_constant.hpp>
-
+#include <mute/config.hpp>                     // MUTE_HOST_DEVICE, MUTE_GCC_UNREACHABLE
+#include <mute/numeric/integral_constant.hpp>  // mute::integral_constant
 namespace mute
 {
 

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -51,7 +51,7 @@ using subbyte_storage_type_t = conditional_t<(mute::sizeof_bits_v<T> <=   8), ui
                                conditional_t<(mute::sizeof_bits_v<T> <=  16), uint16_t,
                                conditional_t<(mute::sizeof_bits_v<T> <=  32), uint32_t,
                                conditional_t<(mute::sizeof_bits_v<T> <=  64), uint64_t,
-                               conditional_t<(mute::sizeof_bits_v<T> <= 128), uint128_t,
+                               conditional_t<(mute::sizeof_bits_v<T> <= 128), uint_bit_t<128>,
                                T>>>>>;
 
 template <class T> struct subbyte_iterator;
@@ -101,20 +101,30 @@ public:
 
   // Copy Ctor
   MUTE_HOST_DEVICE constexpr
-  subbyte_reference(subbyte_reference const& other) {
-    *this = element_type(other);
+  subbyte_reference(subbyte_reference<value_type> const& other) {
+    *this = other.get();
+  }
+
+  MUTE_HOST_DEVICE constexpr
+  subbyte_reference(subbyte_reference<value_type const> const& other) {
+    *this = other.get();
   }
 
   // Copy Assignment
   MUTE_HOST_DEVICE constexpr
-  subbyte_reference& operator=(subbyte_reference const& other) {
-    return *this = element_type(other);
+  subbyte_reference& operator=(subbyte_reference<value_type> const& other) {
+    return *this = other.get();
+  }
+
+  MUTE_HOST_DEVICE constexpr
+  subbyte_reference& operator=(subbyte_reference<value_type const> const& other) {
+    return *this = other.get();
   }
 
   // Assignment
   template <class T_ = element_type>
   MUTE_HOST_DEVICE constexpr
-  enable_if_t<!is_const_v<T_>, subbyte_reference&> operator=(element_type x)
+  enable_if_t<!is_const_v<T_>, subbyte_reference&> operator=(value_type x)
   {
     static_assert(is_same_v<T_, element_type>, "Do not specify template arguments!");
     storage_type item = (reinterpret_cast<storage_type const&>(x) & BitMask);
@@ -150,11 +160,11 @@ public:
 
   // Value
   MUTE_HOST_DEVICE
-  element_type get() const
+  value_type get() const
   {
     if constexpr (is_same_v<bool, value_type>) {      // Extract to bool -- potentially faster impl
       return bool((*ptr_) & (BitMask << idx_));
-    } else {                                          // Extract to element_type
+    } else {                                          // Extract to value_type
       // Extract from the current storage element
       auto item = storage_type((ptr_[0] >> idx_) & BitMask);
 
@@ -166,21 +176,36 @@ public:
         item |= storage_type((ptr_[1] & bit_mask_1) << straddle_bits);
       }
 
-      return reinterpret_cast<element_type&>(item);
+      return reinterpret_cast<value_type&>(item);
     }
   }
 
-  // Extract to type element_type
+  // Extract to type value_type
   MUTE_HOST_DEVICE constexpr
-  operator element_type() const {
+  operator value_type() const {
     return get();
   }
 
   // Address
+  MUTE_HOST_DEVICE
   subbyte_iterator<T> operator&() const {
     return {ptr_, idx_};
   }
 };
+
+template <class T>
+MUTE_HOST_DEVICE
+void
+print(subbyte_reference<T> ref) {
+  mute::print(ref.get());
+}
+
+template <class T>
+MUTE_HOST_DEVICE
+void
+pretty_print(subbyte_reference<T> ref) {
+  mute::pretty_print(ref.get());
+}
 
 //
 // subbyte_iterator
@@ -206,18 +231,22 @@ struct subbyte_iterator
 private:
 
   template <class, class> friend struct swizzle_ptr;
+  template <class U> friend MUTE_HOST_DEVICE constexpr U* raw_pointer_cast(subbyte_iterator<U> const&);
+  template <class N, class U> friend MUTE_HOST_DEVICE constexpr auto recast_ptr(subbyte_iterator<U> const&);
+  template <class U> friend MUTE_HOST_DEVICE void print(subbyte_iterator<U> const&);
 
   // Pointer to storage element
-  storage_type* ptr_ = nullptr;
+  storage_type* ptr_;
 
   // Bit index of value_type starting position within storage_type element.
   // RI: 0 <= idx_ < sizeof_bit<storage_type>
-  uint8_t idx_ = 0;
+  uint8_t idx_;
 
 public:
 
-  // Ctor
-  subbyte_iterator() = default;
+  // Default Ctor
+  MUTE_HOST_DEVICE constexpr
+  subbyte_iterator() : ptr_{nullptr}, idx_{0} {};
 
   // Ctor
   template <class PointerType>
@@ -287,42 +316,61 @@ public:
     return x.ptr_ == y.ptr_ && x.idx_ == y.idx_;
   }
   MUTE_HOST_DEVICE constexpr friend
+  bool operator!=(subbyte_iterator const& x, subbyte_iterator const& y) { return !(x == y); }
+  MUTE_HOST_DEVICE constexpr friend
   bool operator< (subbyte_iterator const& x, subbyte_iterator const& y) {
     return x.ptr_ < y.ptr_ || (x.ptr_ == y.ptr_ && x.idx_ < y.idx_);
   }
-  MUTE_HOST_DEVICE constexpr friend
-  bool operator!=(subbyte_iterator const& x, subbyte_iterator const& y) { return !(x == y); }
   MUTE_HOST_DEVICE constexpr friend
   bool operator<=(subbyte_iterator const& x, subbyte_iterator const& y) { return !(y <  x); }
   MUTE_HOST_DEVICE constexpr friend
   bool operator> (subbyte_iterator const& x, subbyte_iterator const& y) { return  (y <  x); }
   MUTE_HOST_DEVICE constexpr friend
   bool operator>=(subbyte_iterator const& x, subbyte_iterator const& y) { return !(x <  y); }
-
-  // Conversion to raw pointer with loss of subbyte index
-  MUTE_HOST_DEVICE constexpr friend
-  T* raw_pointer_cast(subbyte_iterator const& x) {
-    assert(x.idx_ == 0);
-    return reinterpret_cast<T*>(x.ptr_);
-  }
-
-  // Conversion to NewT_ with possible loss of subbyte index
-  template <class NewT_>
-  MUTE_HOST_DEVICE constexpr friend
-  auto recast_ptr(subbyte_iterator const& x) {
-    using NewT = conditional_t<(is_const_v<T>), NewT_ const, NewT_>;
-    if constexpr (mute::is_subbyte_v<NewT>) {       // Making subbyte_iter, preserve the subbyte idx
-      return subbyte_iterator<NewT>(x.ptr_, x.idx_);
-    } else {                                       // Not subbyte, assume/assert subbyte idx 0
-      return reinterpret_cast<NewT*>(raw_pointer_cast(x));
-    }
-    MUTE_GCC_UNREACHABLE;
-  }
-
-  MUTE_HOST_DEVICE friend void print(subbyte_iterator x) {
-    printf("subptr[%db](%p.%u)", int(sizeof_bits_v<T>), x.ptr_, x.idx_);
-  }
 };
+
+// Conversion to raw pointer with loss of subbyte index
+template <class T>
+MUTE_HOST_DEVICE constexpr
+T*
+raw_pointer_cast(subbyte_iterator<T> const& x) {
+  assert(x.idx_ == 0);
+  return reinterpret_cast<T*>(x.ptr_);
+}
+
+// Conversion to NewT_ with possible loss of subbyte index
+template <class NewT_, class T>
+MUTE_HOST_DEVICE constexpr
+auto
+recast_ptr(subbyte_iterator<T> const& x) {
+  using NewT = conditional_t<(is_const_v<T>), NewT_ const, NewT_>;
+  if constexpr (mute::is_subbyte_v<NewT>) {       // Making subbyte_iter, preserve the subbyte idx
+    return subbyte_iterator<NewT>(x.ptr_, x.idx_);
+  } else {                                       // Not subbyte, assume/assert subbyte idx 0
+    return reinterpret_cast<NewT*>(raw_pointer_cast(x));
+  }
+  MUTE_GCC_UNREACHABLE;
+}
+
+// Dynamic pointers have unknown static alignment
+template <class T>
+MUTE_HOST_DEVICE constexpr
+Int<0>
+max_alignment(subbyte_iterator<T> const& x) {
+  return {};
+}
+
+template <class T>
+MUTE_HOST_DEVICE void
+print(subbyte_iterator<T> const& x) {
+  printf("subptr[%db](%p.%u)", int(sizeof_bits_v<T>), x.ptr_, x.idx_);
+}
+
+template <class T>
+MUTE_HOST_DEVICE void
+print(subbyte_reference<T> const& x) {
+  print(x.get());
+}
 
 //
 // array_subbyte
@@ -365,17 +413,6 @@ private:
   storage_type storage[StorageElements];
 
 public:
-
-  constexpr
-  array_subbyte() = default;
-
-  MUTE_HOST_DEVICE constexpr
-  array_subbyte(array_subbyte const& x) {
-    MUTE_UNROLL
-    for (size_type i = 0; i < StorageElements; ++i) {
-      storage[i] = x.storage[i];
-    }
-  }
 
   MUTE_HOST_DEVICE constexpr
   size_type size() const {
@@ -449,25 +486,16 @@ public:
     return at(N-1);
   }
 
+  // In analogy to std::vector<bool>::data(), these functions are deleted to prevent bugs.
+  // Instead, prefer
+  //   auto* data = raw_pointer_cast(my_subbyte_array.begin());
+  // where the type of auto* is implementation-defined and
+  // with the knowledge that [data, data + my_subbyte_array.size()) may not be a valid range.
   MUTE_HOST_DEVICE constexpr
-  pointer data() {
-    return reinterpret_cast<pointer>(storage);
-  }
+  pointer data() = delete;
 
   MUTE_HOST_DEVICE constexpr
-  const_pointer data() const {
-    return reinterpret_cast<const_pointer>(storage);
-  }
-
-  MUTE_HOST_DEVICE constexpr
-  storage_type* raw_data() {
-    return storage;
-  }
-
-  MUTE_HOST_DEVICE constexpr
-  storage_type const* raw_data() const {
-    return storage;
-  }
+  const_pointer data() const = delete;
 
   MUTE_HOST_DEVICE constexpr
   iterator begin() {

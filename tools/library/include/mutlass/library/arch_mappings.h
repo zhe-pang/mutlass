@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -51,6 +51,11 @@ template <> struct ArchMap<arch::Mp22, arch::OpClassSimt> {
 template <> struct ArchMap<arch::Mp22, arch::OpClassTensorOp> {
   static int const kMin = 22;
   static int const kMax = 22;
+};
+
+template <> struct ArchMap<arch::Mp31, arch::OpClassTensorOp> {
+  static int const kMin = 31;
+  static int const kMax = 31;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

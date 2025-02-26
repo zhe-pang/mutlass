@@ -6,9 +6,9 @@
 
 MUTLASS requires:
 
-- MooreThreads MUSA Toolkit (3.1.0 or later required)
+- MooreThreads MUSA Toolkit (4.0.0 or later required)
 
-- MCC 3.1.0 or later
+- MCC 4.0.0 or later
 
 - CMake 3.8+
 
@@ -136,6 +136,11 @@ To minimize compilation time, specific GPU architectures can be enabled via the 
 cmake .. -DMUTLASS_MCC_ARCHS=22             # compiles for MooreThreads Quyuan GPU architecture
 ```
 
+**MooreThreads MP31 Architecture.**
+
+```bash
+cmake .. -DMUTLASS_MCC_ARCHS=31             # compiles for MooreThreads MP31 GPU architecture
+```
 
 ## Using MUTLASS within other applications
 
@@ -167,4 +172,4 @@ The [MUTLASS Library](/tools/library) defines an API for managing and executing 
 
 The host-side launch API is designed to be analogous to BLAS implementations for convenience, though its kernel selection procedure is intended only to be functionally sufficient. It may not launch the optimal tile size for a given problem. It chooses the first available kernel whose data types, layouts, and alignment constraints satisfy the given problem. Kernel instances and a data structure describing them are completely available to client applications which may choose to implement their own selection logic.
 
-The MUTLASS Library is used by the MUTLASS Profiler to manage kernel instances. 
+The MUTLASS Library is used by the MUTLASS Profiler to manage kernel instances.

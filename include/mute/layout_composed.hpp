@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,9 +31,9 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mute/config.hpp>
-
-#include <mute/layout.hpp>
+#include <mute/config.hpp>                     // MUTE_HOST_DEVICE, MUTE_GCC_UNREACHABLE
+#include <mute/layout.hpp>                     // mute::tuple
+#include <mute/numeric/integral_constant.hpp>  // mute::true_type, mute::false_type, mute::Int
 
 /* This implements a ComposedLayout of the form
  *   LayoutA o Offset o LayoutB
@@ -615,9 +615,28 @@ recast_layout(ComposedLayout<A,O,B> const& layout)
     return upcast<scale::num>(layout);
   }
   else {
-    static_assert(dependent_false<scale>, "Recast not supported.");
+    return downcast<scale::den>(upcast<scale::num>(layout));
   }
   MUTE_GCC_UNREACHABLE;
+}
+
+template <class A, class O, class B>
+MUTE_HOST_DEVICE constexpr
+auto
+max_alignment(ComposedLayout<A,O,B> const& layout)
+{
+  // Do not attempt for general ComposedLayouts
+  //return gcd(max_alignment(layout.layout_a()), max_alignment(layout.offset()), max_alignment(layout.layout_b()));
+  return Int<1>{};
+}
+
+template <class A, class O, class B>
+MUTE_HOST_DEVICE constexpr
+auto
+nullspace(ComposedLayout<A,O,B> const& layout)
+{
+  // Do not attempt for general ComposedLayouts
+  return Layout<_1,_0>{};
 }
 
 //

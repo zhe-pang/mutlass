@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -82,6 +82,9 @@ private:
   /// Buffer holding TensorRef instance to recently allocated memory
   std::vector<uint8_t> tensor_ref_buffer_;
 
+  /// The device ID where the allocation is made
+  int device_;
+
 public:
   //
   // Static member functions
@@ -92,7 +95,7 @@ public:
 
   /// Returns the stride of a packed layout
   static std::vector<int64_t> get_packed_layout(
-    library::LayoutTypeID layout_id, 
+    library::LayoutTypeID layout_id,
     std::vector<int> const &extent);
 
   /// returns the capacity needed
@@ -104,16 +107,16 @@ public:
 
   /// Returns true if two blocks have exactly the same value
   static bool block_compare_equal(
-    library::NumericTypeID numeric_type, 
-    void const *ptr_A, 
-    void const *ptr_B, 
+    library::NumericTypeID numeric_type,
+    void const *ptr_A,
+    void const *ptr_B,
     size_t capacity);
 
   /// Returns true if two blocks have approximately the same value
   static bool block_compare_relatively_equal(
-    library::NumericTypeID numeric_type, 
-    void const *ptr_A, 
-    void const *ptr_B, 
+    library::NumericTypeID numeric_type,
+    void const *ptr_A,
+    void const *ptr_B,
     size_t capacity,
     double epsilon,
     double nonzero_floor);
@@ -124,15 +127,19 @@ public:
   //
 
   DeviceAllocation();
-  
-  DeviceAllocation(library::NumericTypeID type, size_t capacity);
-  
+
   DeviceAllocation(
-    library::NumericTypeID type, 
-    library::LayoutTypeID layout_id, 
-    std::vector<int> const &extent, 
+    library::NumericTypeID type,
+    size_t capacity,
+    int device = -1);
+
+  DeviceAllocation(
+    library::NumericTypeID type,
+    library::LayoutTypeID layout_id,
+    std::vector<int> const &extent,
     std::vector<int64_t> const &stride = std::vector<int64_t>(),
-    int batch_count = 1);
+    int batch_count = 1,
+    int device = -1);
 
   ~DeviceAllocation();
 
@@ -143,9 +150,9 @@ public:
 
   /// Allocates memory for a given layout and tensor
   DeviceAllocation &reset(
-    library::NumericTypeID type, 
-    library::LayoutTypeID layout_id, 
-    std::vector<int> const &extent, 
+    library::NumericTypeID type,
+    library::LayoutTypeID layout_id,
+    std::vector<int> const &extent,
     std::vector<int64_t> const &stride = std::vector<int64_t>(),
     int batch_count = 1);
 
@@ -158,7 +165,7 @@ public:
 
   /// Data type of contained elements
   library::NumericTypeID type() const;
-  
+
   /// Pointer to start of device memory allocation
   void *data() const;
 
@@ -185,7 +192,7 @@ public:
 
   /// Capacity of allocation in number of elements
   size_t capacity() const;
-  
+
   /// Capacity of allocation in bytes
   size_t bytes() const;
 
@@ -206,9 +213,12 @@ public:
 
   /// Initializes a host allocation to a random distribution using std::cout
   void initialize_random_sparsemeta_host(int seed, int MetaSizeInBits);
-  
+
   /// Uniformly fills a tensor with a value when provided o.w. zero
-  void fill(double value);
+  void fill_device(double value);
+
+  /// Uniformly fills a host allocation with a value when provided o.w. zero
+  void fill_host(double value);
 
   /// Copies from an equivalent-sized tensor in device memory
   void copy_from_device(void const *ptr);
@@ -219,8 +229,12 @@ public:
   /// Copies from an equivalent-sized tensor in device memory
   void copy_to_host(void *ptr);
 
-  /// Writes a tensor to csv 
+  /// Writes a tensor to csv
   void write_tensor_csv(std::ostream &out);
+
+private:
+  /// A wrapper that sets the device, performs malloc, and sets back
+  musaError_t malloc(void** ptr, size_t size);
 };
 
 using DeviceAllocationList = std::list<DeviceAllocation>;

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -45,7 +45,7 @@ namespace detail {
 
 template<int ThreadCount, class Element, int Alignment, class StrideType, int TileSizeMN, int TileSizeK, class CopyOperation>
 constexpr auto
-make_gmem_tiled_copy() {
+make_simt_tiled_copy() {
   // Maximize the number of threads along the gmem major mode to promote coalesced reads
   // While making sure our thread layout tiles the threadblock tile evenly
 

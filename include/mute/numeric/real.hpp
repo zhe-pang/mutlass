@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -36,6 +36,23 @@
 namespace mute
 {
 
+/// Generic add
+template <class C, class A, class B>
+MUTE_HOST_DEVICE constexpr
+void
+add(C& c, A const& a, B const& b)
+{
+  c = a + b;
+}
+
+/// Generic multiply
+template <class C, class A, class B>
+MUTE_HOST_DEVICE constexpr
+void
+mul(C& c, A const& a, B const& b)
+{
+  c = a * b;
+}
 /// Generic fused multiply-add
 template <class D, class A, class B, class C>
 MUTE_HOST_DEVICE constexpr

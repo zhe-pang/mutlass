@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -62,7 +62,7 @@ MutlassProfiler::~MutlassProfiler() {
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// Exemute the program
+/// Execute the program
 int MutlassProfiler::operator()() {
 
   if (options_.cmdline.num_naked_args() > 0) {
@@ -177,19 +177,6 @@ void MutlassProfiler::print_usage_(std::ostream &out) {
 /// Prints usage
 void MutlassProfiler::print_options_(std::ostream &out) {
   options_.print_options(out);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
-/// Initializes the MUSA device
-void MutlassProfiler::initialize_device_() {
-
-  musaError_t result = musaSetDevice(options_.device.device);
-
-  if (result != musaSuccess) {
-    std::cerr << "Failed to set device.";
-    throw std::runtime_error("Failed to set device");
-  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

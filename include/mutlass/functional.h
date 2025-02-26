@@ -1,5 +1,5 @@
   /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -313,7 +313,19 @@ template <typename T, bool PropagateNaN = false>
 struct maximum {
   MUTLASS_HOST_DEVICE
   T operator()(T const &lhs, T const &rhs) const {
-    return (lhs < rhs ? rhs : lhs);
+    if constexpr (PropagateNaN && mutlass::platform::is_floating_point<T>::value) {
+      using MUTLASS_CMATH_NAMESPACE :: isnan;
+
+      // Call isnan unqualified, so argument-dependent lookup (ADL)
+      // will find overloads such as mutlass::isnan(half_t).
+      // Calling ::isnan or std::isnan directly would force
+      // implicit conversions to float of custom number types
+      // in the mutlass namespace (e.g., mutlass::half_t).
+      return lhs > rhs || isnan(lhs) ? lhs : rhs;
+    }
+    else {
+      return (lhs < rhs ? rhs : lhs);
+    }
   }
 };
 
@@ -380,19 +392,14 @@ template <typename T, bool PropagateNaN = false>
 struct minimum{
   MUTLASS_HOST_DEVICE
   T operator()(T const &lhs, T const &rhs) const {
-    return (rhs < lhs ? rhs : lhs);
-  }
-};
+    if constexpr (PropagateNaN && mutlass::platform::is_floating_point<T>::value) {
+      using MUTLASS_CMATH_NAMESPACE :: isnan;
 
-template <typename T>
-struct minimum<T, true> {
-  MUTLASS_HOST_DEVICE
-  T operator()(T const &lhs, T const &rhs) const {
-#if defined(__MUSA_ARCH__)
-    return lhs < rhs or isnan(lhs) ? lhs : rhs;
-#else
-    return lhs < rhs or std::isnan(lhs) ? lhs : rhs;
-#endif
+      return lhs < rhs || isnan(lhs) ? lhs : rhs;
+    }
+    else {
+      return (rhs < lhs ? rhs : lhs);
+    }
   }
 };
 
@@ -403,6 +410,10 @@ struct minimum<float, false> {
     return fminf(lhs, rhs);
   }
 };
+
+template <typename T>
+struct minimum_with_nan_propagation : minimum<T, true> 
+{};
 
 template <typename T, bool PropagateNaN = false>
 struct maximum_absolute_value {
@@ -574,39 +585,13 @@ struct atomic_add
   {
 #if defined(__MUSA_ARCH__)
     atomicAdd(ptr, data);
-#endif
-  }
-};
-
-template<>
-struct atomic_add<double>
-{
-  MUTLASS_DEVICE
-  void operator()(double *ptr, const double &data)
-  {
-#if !defined(__MUSA_ARCH__)
-    MUTLASS_UNUSED(ptr);
-    MUTLASS_UNUSED(data);
 #else
-    atomicAdd(ptr, data);
-#endif // (__MUSA_ARCH__ >= 600)
-  }
-};
-
-template<>
-struct atomic_add<half2>
-{
-  MUTLASS_DEVICE
-  void operator()(half2 *ptr, const half2 &data)
-  {
     MUTLASS_UNUSED(ptr);
     MUTLASS_UNUSED(data);
     MUTLASS_NOT_IMPLEMENTED();
+#endif
   }
 };
-
-template <typename T>
-using red [[deprecated("use atomic_add instead")]] = atomic_add<T>;
 
 template <typename T>
 struct atomic_maximum {

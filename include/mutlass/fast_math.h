@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+* Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -39,7 +39,6 @@
 #include <cmath>
 #include <type_traits>
 #endif
-
 #include "mutlass/mutlass.h"
 #include "mutlass/array.h"
 #include "mutlass/uint128.h"
@@ -319,12 +318,13 @@ void fast_divmod(int& quo, int64_t& rem, int64_t src, int div, unsigned int mul,
 ///   // remainder = (dividend % divisor)
 ///
 struct FastDivmod {
+  using value_div_type = int;
+  using value_mod_type = int64_t;
+  int32_t divisor = 1;
+  uint32_t multiplier = 0u;
+  uint32_t shift_right = 0u;
 
-  int divisor;
-  unsigned int multiplier;
-  unsigned int shift_right;
-
-  /// Find quotient and remainder using device-side intrinsics
+  // Find quotient and remainder using device-side intrinsics
   MUTLASS_HOST_DEVICE
   void fast_divmod(int& quotient, int& remainder, int dividend) const {
 
@@ -358,21 +358,17 @@ struct FastDivmod {
   ///
   /// This precomputes some values based on the divisor and is computationally expensive.
 
-  MUTLASS_HOST_DEVICE
-  FastDivmod(): divisor(0), multiplier(0), shift_right(0) { }
+  constexpr FastDivmod() = default;
 
   MUTLASS_HOST_DEVICE
-  FastDivmod(int divisor): divisor(divisor) {
-
+  FastDivmod(int divisor_): divisor(divisor_) {
+    assert(divisor_ >= 0);
     if (divisor != 1) {
       unsigned int p = 31 + find_log2(divisor);
       unsigned m = unsigned(((1ull << p) + unsigned(divisor) - 1) / unsigned(divisor));
 
       multiplier = m;
       shift_right = p - 32;
-    } else {
-      multiplier = 0;
-      shift_right = 0;
     }
   }
 
@@ -430,7 +426,6 @@ struct FastDivmod {
   operator int() const { return divisor; }
 
 };
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Object to encapsulate the fast division+modulus operation for 64b integer division.
@@ -518,7 +513,7 @@ struct FastDivmodU64 {
   /// Computes the remainder given a computed quotient and dividend
   MUTLASS_HOST_DEVICE
   uint64_t modulus(uint64_t quotient, uint64_t dividend) const {
-    return uint32_t(dividend - quotient * divisor);
+    return dividend - quotient * divisor;
   }
 
   /// Returns the quotient of floor(dividend / divisor) and computes the remainder
@@ -880,7 +875,11 @@ double fast_exp(double x) {
 
 MUTLASS_HOST_DEVICE
 half_t fast_exp(half_t x) {
-  return (half_t)(fast_exp(float(x)));
+  #if defined(__MUSACC__) && (_cplusplus)
+      return (half_t)(::hexp(x.to_half()));
+  #else
+      return (half_t)(fast_exp(float(x)));
+  #endif
 }
 
 MUTLASS_HOST_DEVICE
@@ -904,7 +903,11 @@ double fast_log(double x) {
 MUTLASS_HOST_DEVICE
 float fast_tanh(float x) {
   #if defined(__MUSA_ARCH__)
-  return ::tanhf(x);
+    #if (__MUSA_ARCH__ >= 310)
+      return __musa_tanh_f(x);
+    #else
+      return ::tanhf(x);
+    #endif
   #else
   return std::tanh(x);
   #endif
@@ -933,6 +936,34 @@ struct fast_exp_op {
     return fast_exp(rhs);
   }
 };
+
+#if defined(__MUSACC__) && (_cplusplus)
+template <int N>
+struct fast_exp_op<Array<half_t, N>> {
+  MUTLASS_DEVICE
+  Array<half_t, N> operator()(Array<half_t, N> const &rhs) const {
+
+    Array<half_t, N> result;
+
+    // use x2 specialization
+    __half2 const *in  = reinterpret_cast<__half2 const *>(&rhs);
+    __half2 *out = reinterpret_cast<__half2 *>(&result);
+
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < N / 2; ++i) {
+      out[i] = ::h2exp(in[i]);
+    }
+
+    // residual
+    if (N % 2) {
+      half_t last = rhs[N - 1];
+      result[N - 1] = half_t(::hexp(last.to_half()));
+    }
+
+    return result;
+  }
+};
+#endif // #if defined(__MUSACC__) && (_cplusplus)
 
 template <typename T, int N>
 struct fast_exp_op<Array<T, N>> {

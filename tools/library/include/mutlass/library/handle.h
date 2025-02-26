@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -70,8 +70,10 @@ private:
   /// Indicates whether scalars are host or device pointers
   ScalarPointerMode scalar_pointer_mode_;
 
-  /// Pointer to the most recently exemuted operation
+  /// Pointer to the most recently executed operation
   Operation const *last_operation_;
+
+  int device_idx_;
 
 public:
 
@@ -121,14 +123,14 @@ public:
   /// Sets the scalar pointer mode
   void set_scalar_pointer_mode(ScalarPointerMode mode);
 
-  /// Gets the most recently exemuted operation
+  /// Gets the most recently executed operation
   Operation const *get_last_operation() const;
 
   //
   // Computations
   //
 
-  /// Exemutes a GEMM computation: D <= alpha * A*B + beta * C
+  /// Executes a GEMM computation: D <= alpha * A*B + beta * C
   Status gemm(
 
     int M,                                    /// GEMM M dimension
@@ -166,7 +168,7 @@ public:
     int64_t ldd                               /// Leading dimension of D matrix
   );
   
-  /// Exemutes a GEMM computation: D <= alpha * A*B + beta * C.
+  /// Executes a GEMM computation: D <= alpha * A*B + beta * C.
   //
   // Supports batched-strided, batched array or split-K serial or split-K parallel.
   //

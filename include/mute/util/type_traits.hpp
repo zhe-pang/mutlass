@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -45,7 +45,7 @@
 #include <limits>       // numeric_limits
 #endif
 
-#include <mute/config.hpp>
+#include <mute/config.hpp> // MUTE_STL_NAMESPACE
 
 namespace mute
 {
@@ -80,11 +80,14 @@ using MUTE_STL_NAMESPACE::is_const_v;
 using MUTE_STL_NAMESPACE::is_volatile;
 using MUTE_STL_NAMESPACE::is_volatile_v;
 
+// Defined in mute/numeric/integral_constant.hpp
 // using MUTE_STL_NAMESPACE::true_type;
 // using MUTE_STL_NAMESPACE::false_type;
 
 using MUTE_STL_NAMESPACE::conditional;
 using MUTE_STL_NAMESPACE::conditional_t;
+
+using MUTE_STL_NAMESPACE::add_const_t;
 
 using MUTE_STL_NAMESPACE::remove_const_t;
 using MUTE_STL_NAMESPACE::remove_cv_t;
@@ -107,6 +110,13 @@ using MUTE_STL_NAMESPACE::is_convertible_v;
 
 using MUTE_STL_NAMESPACE::is_same;
 using MUTE_STL_NAMESPACE::is_same_v;
+
+using MUTE_STL_NAMESPACE::is_constructible;
+using MUTE_STL_NAMESPACE::is_constructible_v;
+using MUTE_STL_NAMESPACE::is_default_constructible;
+using MUTE_STL_NAMESPACE::is_default_constructible_v;
+using MUTE_STL_NAMESPACE::is_standard_layout;
+using MUTE_STL_NAMESPACE::is_standard_layout_v;
 
 using MUTE_STL_NAMESPACE::is_arithmetic;
 using MUTE_STL_NAMESPACE::is_unsigned;
@@ -131,6 +141,15 @@ using MUTE_STL_NAMESPACE::common_type_t;
 
 using MUTE_STL_NAMESPACE::remove_pointer;
 using MUTE_STL_NAMESPACE::remove_pointer_t;
+
+using MUTE_STL_NAMESPACE::add_pointer;
+using MUTE_STL_NAMESPACE::add_pointer_t;
+
+using MUTE_STL_NAMESPACE::alignment_of;
+using MUTE_STL_NAMESPACE::alignment_of_v;
+
+using MUTE_STL_NAMESPACE::is_pointer;
+using MUTE_STL_NAMESPACE::is_pointer_v;
 
 // <utility>
 using MUTE_STL_NAMESPACE::declval;
@@ -262,4 +281,19 @@ struct conditional_template<false, True, False> {
   template <class... U>
   using type = False<U...>;
 };
+
+//
+// is_any_of
+//
+
+// Member `value` is true if and only if T is same as (is_same_v) at least one of the types in Us
+template <class T, class... Us>
+struct is_any_of {
+  constexpr static bool value = (... || MUTE_STL_NAMESPACE::is_same_v<T, Us>);
+};
+
+// Is true if and only if T is same as (is_same_v) at least one of the types in Us
+template <class T, class... Us>
+inline constexpr bool is_any_of_v = is_any_of<T, Us...>::value;
+
 } // end namespace mute

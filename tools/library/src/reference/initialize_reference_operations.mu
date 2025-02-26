@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -44,7 +44,8 @@ namespace mutlass {
 namespace library {
 
 // note: init methods for the same op-class may be split into multiple to parallelize compilation
-void initialize_gemm_reference_operations_int8_canonical(Manifest &manifest);
+void initialize_gemm_reference_operations_s8_s8_s32(Manifest &manifest);
+void initialize_gemm_reference_operations_u8_u8_s32(Manifest &manifest);
 void initialize_gemm_reference_operations_fp32out(Manifest &manifest);
 void initialize_gemm_reference_operations_fp_other(Manifest &manifest);
 
@@ -52,7 +53,8 @@ void initialize_gemm_reference_operations_fp_other(Manifest &manifest);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void initialize_reference_operations(Manifest &manifest) {
-  initialize_gemm_reference_operations_int8_canonical(manifest);
+  initialize_gemm_reference_operations_s8_s8_s32(manifest);
+  initialize_gemm_reference_operations_u8_u8_s32(manifest);
   initialize_gemm_reference_operations_fp32out(manifest);
   initialize_gemm_reference_operations_fp_other(manifest);
 
@@ -64,4 +66,3 @@ void initialize_reference_operations(Manifest &manifest) {
 } // namespace mutlass
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-

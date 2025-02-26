@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -58,13 +58,19 @@
 #define MUTLASS_DEVICE inline
 #endif
 
+#if ! defined(_MSC_VER)
+#define MUTLASS_LAMBDA_FUNC_INLINE __attribute__((always_inline))
+#else
+#define MUTLASS_LAMBDA_FUNC_INLINE [[msvc::forceinline]]
+#endif
+
 #define MUTLASS_HOST __host__
 #define MUTLASS_GLOBAL __global__ static
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template<typename T>
-MUTLASS_HOST_DEVICE void __MUTLASS_UNUSED(T const &) 
+MUTLASS_HOST_DEVICE void __MUTLASS_UNUSED(T const &)
 { }
 
 #if defined(__GNUC__)
@@ -75,11 +81,11 @@ MUTLASS_HOST_DEVICE void __MUTLASS_UNUSED(T const &)
 
 #ifdef _MSC_VER
 // Provides support for alternative operators 'and', 'or', and 'not'
-#include <iso646.h>
+#include <ciso646>
 #endif // _MSC_VER
 
 #if !defined(__MUSACC_RTC__)
-#include <assert.h>
+#include <cassert>
 #endif
 
 #if defined(__MUSA_ARCH__)
@@ -96,6 +102,11 @@ MUTLASS_HOST_DEVICE void __MUTLASS_UNUSED(T const &)
   #endif
 #endif
 
+#if defined(__MUSA_ARCH__)
+#  define MUTLASS_CMATH_NAMESPACE
+#else
+#  define MUTLASS_CMATH_NAMESPACE std
+#endif
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace mutlass {

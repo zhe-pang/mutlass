@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,13 +31,11 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mute/config.hpp>
-
-#include <mute/util/type_traits.hpp>  // iterator_traits
-#include <mute/container/array_subbyte.hpp>
-
-#include <mute/pointer_base.hpp>
-#include <mute/swizzle.hpp>
+#include <mute/config.hpp>                   // MUTE_HOST_DEVICE
+#include <mute/pointer_base.hpp>             // mute::iter_adaptor
+#include <mute/swizzle.hpp>                  // mute::Swizzle, mute::get_swizzle primary template
+#include <mute/util/type_traits.hpp>         // mute::iterator_traits
+#include <mute/container/array_subbyte.hpp>  // mute::subbyte_iterator
 
 /* This implements a swizzle pointer of the form
  *   InvolutionFn o PtrAdd
@@ -82,27 +80,29 @@ struct swizzle_ptr : iter_adaptor<Iterator,swizzle_ptr<SwizzleFn,Iterator>>
   MUTE_HOST_DEVICE constexpr static
   Iter apply_swizzle(Iter ptr) {
     if constexpr (mute::is_gmem_v<Iter>) {
-      return {apply_swizzle<typename iterator_traits<decltype(ptr.get())>::value_type, 1>(ptr.get())};
+      return {apply_swizzle<typename iterator_traits<decltype(ptr.get())>::value_type,
+                            AddressSpace::Global>(ptr.get())};
     } else if constexpr (mute::is_smem_v<Iter>) {
-      return {apply_swizzle<typename iterator_traits<decltype(ptr.get())>::value_type, 3>(ptr.get())};
+      return {apply_swizzle<typename iterator_traits<decltype(ptr.get())>::value_type,
+                            AddressSpace::Shared>(ptr.get())};
     } else {
-      return {apply_swizzle<typename iterator_traits<decltype(ptr.get())>::value_type, 0>(ptr.get())};
+      return {apply_swizzle<typename iterator_traits<decltype(ptr.get())>::value_type,
+                            AddressSpace::Generic>(ptr.get())};
     }
   }
 
-  template <class T, int I = 0>
+  template <class T, AddressSpace AS = AddressSpace::Generic>
   MUTE_HOST_DEVICE constexpr static
   T* apply_swizzle(T* ptr) {
     // reinterpret_cast can't be used to cast to a different address space
     // compiler only allows c-style pointer cast
-    return (T*)(reinterpret_cast<T __attribute__((address_space(I)))*>(
-                  SwizzleFn::apply(reinterpret_cast<uintptr_t>(ptr))));
+    return (T*)make_ptr_with_address_space<AS>(SwizzleFn::apply(reinterpret_cast<uintptr_t>(ptr)));
   }
 
-  template <class T, int I = 0>
+  template <class T, AddressSpace AS = AddressSpace::Generic>
   MUTE_HOST_DEVICE constexpr static
   subbyte_iterator<T> apply_swizzle(subbyte_iterator<T> ptr) {
-    return {apply_swizzle<T, I>(ptr.ptr_), ptr.idx_};
+    return {apply_swizzle<T, AS>(ptr.ptr_), ptr.idx_};
   }
 
   MUTE_HOST_DEVICE constexpr
@@ -159,6 +159,14 @@ MUTE_HOST_DEVICE constexpr
 auto
 recast_ptr(swizzle_ptr<SwizzleFn,P> const& ptr) {
   return make_swizzle_ptr(recast_ptr<NewT>(ptr.get()), SwizzleFn{});
+}
+
+// The statically-known alignment of a swizzle pointer is the alignment of the swizzle function converted to bits
+template <class SwizzleFn, class P>
+MUTE_HOST_DEVICE constexpr
+auto
+max_alignment(swizzle_ptr<SwizzleFn,P> const&) {
+  return Int<8>{} * max_alignment(SwizzleFn{});
 }
 
 //

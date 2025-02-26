@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -634,7 +634,7 @@ public:
   using StorageVec = StorageUnit[kNumStorageUnitPerStoredVec];
   using StorageVecPointer = StorageVec *;
 
-  using CudaAtomicType = typename platform::conditional<
+  using MusaAtomicType = typename platform::conditional<
       sizeof_bits<StorageUnit>::value == 16,
       uint32_t,
       uint64_t
@@ -1007,7 +1007,7 @@ public:
   using StorageVec = StorageUnit[kNumStorageUnitPerStoredVec];
   using StorageVecPointer = StorageVec const *;
 
-  using CudaAtomicType = typename platform::conditional<
+  using MusaAtomicType = typename platform::conditional<
       sizeof_bits<StorageUnit>::value == 16,
       uint32_t,
       uint64_t

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -46,20 +46,40 @@ namespace mute
 // Signed integers
 //
 
-using int2_t  = mutlass::int2b_t;
-using int4_t  = mutlass::int4b_t;
+using  v2i32_t = int32_t __attribute__((vector_size(8)));
+using  v3i32_t = int32_t __attribute__((vector_size(12)));
+using  v4i32_t = int32_t __attribute__((vector_size(16)));
+using  v5i32_t = int32_t __attribute__((vector_size(20)));
+using  v8i32_t = int32_t __attribute__((vector_size(32)));
+using v16i32_t = int32_t __attribute__((vector_size(64)));
+using v32i32_t = int32_t __attribute__((vector_size(128)));
+
+using int2_t    = mutlass::int2b_t;
+using int4_t    = mutlass::int4b_t;
 using MUTE_STL_NAMESPACE::int8_t;
 using MUTE_STL_NAMESPACE::int16_t;
 using MUTE_STL_NAMESPACE::int32_t;
 using MUTE_STL_NAMESPACE::int64_t;
+using int96_t   = mute::v3i32_t;
+using int128_t  = mute::v4i32_t;
+using int160_t  = mute::v5i32_t;
+using int256_t  = mute::v8i32_t;
+using int512_t  = mute::v16i32_t;
+using int1024_t = mute::v32i32_t;
 
 template <int N> struct int_bit;
-template <> struct int_bit<  2>  { using type = mutlass::int2b_t; };
-template <> struct int_bit<  4>  { using type = mutlass::int4b_t; };
-template <> struct int_bit<  8>  { using type = int8_t;  };
-template <> struct int_bit< 16>  { using type = int16_t; };
-template <> struct int_bit< 32>  { using type = int32_t; };
-template <> struct int_bit< 64>  { using type = int64_t; };
+template <> struct int_bit<   2>  { using type = int2_t; };
+template <> struct int_bit<   4>  { using type = int4_t; };
+template <> struct int_bit<   8>  { using type = int8_t;           };
+template <> struct int_bit<  16>  { using type = int16_t;          };
+template <> struct int_bit<  32>  { using type = int32_t;          };
+template <> struct int_bit<  64>  { using type = int64_t;          };
+template <> struct int_bit<  96>  { using type = mute::int96_t;    };
+template <> struct int_bit< 128>  { using type = mute::int128_t;   };
+template <> struct int_bit< 160>  { using type = mute::int160_t;   };
+template <> struct int_bit< 256>  { using type = mute::int256_t;   };
+template <> struct int_bit< 512>  { using type = mute::int512_t;   };
+template <> struct int_bit<1024>  { using type = mute::int1024_t;  };
 
 template <int N>
 using int_bit_t = typename int_bit<N>::type;
@@ -74,24 +94,35 @@ using int_byte_t = typename int_byte<N>::type;
 // Unsigned integers
 //
 
-using uint1_t   = mutlass::uint1b_t;
-using uint2_t   = mutlass::uint2b_t;
-using uint4_t   = mutlass::uint4b_t;
+using  v4u32_t = uint32_t __attribute__((vector_size(16)));
+using  v8u32_t = uint32_t __attribute__((vector_size(32)));
+using v16u32_t = uint32_t __attribute__((vector_size(64)));
+using v32u32_t = uint32_t __attribute__((vector_size(128)));
+
+using uint1_t    = mutlass::uint1b_t;
+using uint2_t    = mutlass::uint2b_t;
+using uint4_t    = mutlass::uint4b_t;
 using MUTE_STL_NAMESPACE::uint8_t;
 using MUTE_STL_NAMESPACE::uint16_t;
 using MUTE_STL_NAMESPACE::uint32_t;
 using MUTE_STL_NAMESPACE::uint64_t;
 using mutlass::uint128_t;
+using uint256_t  = mute::v8u32_t;
+using uint512_t  = mute::v16u32_t;
+using uint1024_t = mute::v32u32_t;
 
 template <int N> struct uint_bit;
-template <> struct uint_bit<  1> { using type = mutlass::uint1b_t; };
-template <> struct uint_bit<  2> { using type = mutlass::uint2b_t; };
-template <> struct uint_bit<  4> { using type = mutlass::uint4b_t; };
-template <> struct uint_bit<  8> { using type = uint8_t;  };
-template <> struct uint_bit< 16> { using type = uint16_t; };
-template <> struct uint_bit< 32> { using type = uint32_t; };
-template <> struct uint_bit< 64> { using type = uint64_t; };
-template <> struct uint_bit<128> { using type = mutlass::uint128_t; };
+template <> struct uint_bit<   1> { using type = uint1_t; };
+template <> struct uint_bit<   2> { using type = uint2_t; };
+template <> struct uint_bit<   4> { using type = uint4_t; };
+template <> struct uint_bit<   8> { using type = uint8_t;           };
+template <> struct uint_bit<  16> { using type = uint16_t;          };
+template <> struct uint_bit<  32> { using type = uint32_t;          };
+template <> struct uint_bit<  64> { using type = uint64_t;          };
+template <> struct uint_bit< 128> { using type = mute::v4u32_t;     };
+template <> struct uint_bit< 256> { using type = mute::uint256_t;   };
+template <> struct uint_bit< 512> { using type = mute::uint512_t;   };
+template <> struct uint_bit<1024> { using type = mute::uint1024_t;  };
 
 template <int N>
 using uint_bit_t = typename uint_bit<N>::type;

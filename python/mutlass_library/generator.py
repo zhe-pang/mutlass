@@ -1,6 +1,6 @@
 #################################################################################################
 #
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -153,12 +153,12 @@ def GenerateMP22_Simt_gemm_f32(manifest, musa_version):
   max_cc = 1024
 
   tile_descriptions = [
-    TileDescription([128,  32, 4], 2, math_inst, min_cc, max_cc, [[16,  8, 1]], [[[16, 4], [4, 1]], [[8, 4],  [4, 1]], [Underscore()]]),
-    TileDescription([128,  64, 4], 2, math_inst, min_cc, max_cc, [[16,  8, 1]], [[[16, 4], [4, 1]], [[8, 4],  [4, 1]], [Underscore()]]),
-    TileDescription([128, 128, 4], 2, math_inst, min_cc, max_cc, [[16, 16, 1]], [[[16, 4], [4, 1]], [[16, 4], [4, 1]], [Underscore()]]),
+    TileDescription([128,  32, 4], 2, math_inst, min_cc, max_cc),
+    TileDescription([128,  64, 4], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 4], 2, math_inst, min_cc, max_cc),
 
-    TileDescription([128,  64, 8], 2, math_inst, min_cc, max_cc, [[16, 16, 1]], [[[16, 4], [4, 1]], [[16, 4], [4, 1]], [Underscore()]]),
-    TileDescription([128, 128, 8], 2, math_inst, min_cc, max_cc, [[16, 32, 1]], [[[16, 4], [4, 1]], [[32, 4], [4, 1]], [Underscore()]]),
+    TileDescription([128,  64, 8], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 8], 2, math_inst, min_cc, max_cc),
   ]
 
   data_types = [
@@ -177,11 +177,15 @@ def GenerateMP22_Simt_gemm_f32(manifest, musa_version):
   ]
 
   for tile_description in tile_descriptions:
+    tile_m, tile_n, tile_k = tile_description.tile_shape
+
+    thread_num_ = max(tile_m * tile_n // 64, 128)
+    thread_num = thread_num_ * max((tile_m * tile_n * tile_k) // thread_num_ // 256, 1)
     aligns = [
       [
-        min(tile_description.tile_shape[0] * tile_description.tile_shape[2] // (tile_description.atom_layout[0][0] * tile_description.atom_layout[0][1]), 4),
-        min(tile_description.tile_shape[1] * tile_description.tile_shape[2] // (tile_description.atom_layout[0][0] * tile_description.atom_layout[0][1]), 4),
-        min(tile_description.tile_shape[0] * tile_description.tile_shape[1] // (tile_description.atom_layout[0][0] * tile_description.atom_layout[0][1]), 4)
+        min(tile_m * tile_k // thread_num, 4),
+        min(tile_n * tile_k // thread_num, 4),
+        min(tile_m * tile_n // thread_num, 4)
       ],
       [1, 1, 1]
     ]
@@ -210,17 +214,11 @@ def GenerateMP22_TensorOp_gemm_tf32(manifest, musa_version):
   max_cc = 22
 
   tile_descriptions = [
-    # TileDescription([128, 32, 16], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([128, 64, 16], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([128, 128, 16], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([256, 128, 16], 2, math_inst, min_cc, max_cc, [[2, 1, 1]]),
-    # TileDescription([256, 256, 16], 2, math_inst, min_cc, max_cc, [[2, 2, 1]]),
-
-    TileDescription([128, 32,  16], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([128, 64,  16], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([128, 128, 16], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([256, 128, 16], 2, math_inst, min_cc, max_cc, [[2, 1, 1]], [[[32, 2,  4],[1, 128, 32]], [Underscore()],             [Underscore()]]),
-    TileDescription([256, 256, 16], 2, math_inst, min_cc, max_cc, [[2, 2, 1]], [[[32, 2,  4],[1, 128, 32]], [[32, 2,  4],[1, 128, 32]], [Underscore()]]),
+    TileDescription([128, 32, 16], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 64, 16], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 16], 2, math_inst, min_cc, max_cc),
+    TileDescription([256, 128, 16], 2, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 16], 2, math_inst, min_cc, max_cc),
   ]
 
   data_types = [
@@ -267,17 +265,11 @@ def GenerateMP22_TensorOp_gemm_f16(manifest, musa_version):
   max_cc = 22
 
   tile_descriptions = [
-    # TileDescription([128, 32, 32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([128, 64, 32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([128, 128, 32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([256, 128, 32], 2, math_inst, min_cc, max_cc, [[2, 1, 1]]),
-    # TileDescription([256, 256, 32], 2, math_inst, min_cc, max_cc, [[2, 2, 1]]),
-
-    TileDescription([128, 32,  32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([128, 64,  32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([128, 128, 32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([256, 128, 32], 2, math_inst, min_cc, max_cc, [[2, 1, 1]], [[[32, 2,  4],[1, 128, 32]], [Underscore()],             [Underscore()]]),
-    TileDescription([256, 256, 32], 2, math_inst, min_cc, max_cc, [[2, 2, 1]], [[[32, 2,  4],[1, 128, 32]], [[32, 2,  4],[1, 128, 32]], [Underscore()]]),
+    TileDescription([128, 32, 32], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 64, 32], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 32], 2, math_inst, min_cc, max_cc),
+    TileDescription([256, 128, 32], 2, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 32], 2, math_inst, min_cc, max_cc),
   ]
 
   data_types = [
@@ -325,17 +317,11 @@ def GenerateMP22_TensorOp_gemm_bf16(manifest, musa_version):
   max_cc = 22
 
   tile_descriptions = [
-    # TileDescription([128, 32, 32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([128, 64, 32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([128, 128, 32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([256, 128, 32], 2, math_inst, min_cc, max_cc, [[2, 1, 1]]),
-    # TileDescription([256, 256, 32], 2, math_inst, min_cc, max_cc, [[2, 2, 1]]),
-
-    TileDescription([128, 32,  32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([128, 64,  32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([128, 128, 32], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([256, 128, 32], 2, math_inst, min_cc, max_cc, [[2, 1, 1]], [[[32, 2,  4],[1, 128, 32]], [Underscore()],             [Underscore()]]),
-    TileDescription([256, 256, 32], 2, math_inst, min_cc, max_cc, [[2, 2, 1]], [[[32, 2,  4],[1, 128, 32]], [[32, 2,  4],[1, 128, 32]], [Underscore()]]),
+    TileDescription([128, 32, 32], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 64, 32], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 32], 2, math_inst, min_cc, max_cc),
+    TileDescription([256, 128, 32], 2, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 32], 2, math_inst, min_cc, max_cc),
   ]
 
   data_types = [
@@ -382,17 +368,11 @@ def GenerateMP22_TensorOp_gemm_s8(manifest, musa_version):
   max_cc = 22
 
   tile_descriptions = [
-    # TileDescription([128, 32, 64], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([128, 64, 64], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([128, 128, 64], 2, math_inst, min_cc, max_cc, [[1, 1, 1]]),
-    # TileDescription([256, 128, 64], 2, math_inst, min_cc, max_cc, [[2, 1, 1]]),
-    # TileDescription([256, 256, 64], 2, math_inst, min_cc, max_cc, [[2, 2, 1]]),
-
-    TileDescription([128, 32,  64], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([128, 64,  64], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([128, 128, 64], 2, math_inst, min_cc, max_cc, [[1, 1, 1]], [[Underscore()],             [Underscore()],             [Underscore()]]),
-    TileDescription([256, 128, 64], 2, math_inst, min_cc, max_cc, [[2, 1, 1]], [[[32, 2,  4],[1, 128, 32]], [Underscore()],             [Underscore()]]),
-    TileDescription([256, 256, 64], 2, math_inst, min_cc, max_cc, [[2, 2, 1]], [[[32, 2,  4],[1, 128, 32]], [[32, 2,  4],[1, 128, 32]], [Underscore()]]),
+    TileDescription([128, 32, 64], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 64, 64], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 64], 2, math_inst, min_cc, max_cc),
+    TileDescription([256, 128, 64], 2, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 64], 2, math_inst, min_cc, max_cc),
   ]
 
   data_types = [
@@ -430,6 +410,341 @@ def GenerateMP22_TensorOp_gemm_s8(manifest, musa_version):
 
     CreateGemmUniversal3xOperator(manifest, layouts, tile_descriptions, data_types, schedules_default)
 
+def GenerateMP31_Simt_gemm_f32(manifest, musa_version):
+  math_inst = MathInstruction(
+                [1, 1, 1],
+                DataType.f32, DataType.f32, DataType.f32,
+                OpcodeClass.Simt)
+
+  min_cc = 31
+  max_cc = 1024
+
+  tile_descriptions = [
+    TileDescription([128,  32, 8], 2, math_inst, min_cc, max_cc),
+    TileDescription([128,  64, 8], 2, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 8], 2, math_inst, min_cc, max_cc),
+  ]
+
+  data_types = [
+    {
+      "a_type"   : math_inst.element_a,
+      "b_type"   : math_inst.element_b,
+      "c_type"   : math_inst.element_accumulator,
+      "d_type"   : math_inst.element_accumulator,
+      "acc_type" : math_inst.element_accumulator,
+      "epi_type" : math_inst.element_accumulator
+    }
+  ]
+
+  schedules_default = [
+    [KernelScheduleType.Multistage, EpilogueScheduleType.ScheduleAuto],
+  ]
+
+  for tile_description in tile_descriptions:
+    tile_m, tile_n, tile_k = tile_description.tile_shape
+    thread_num_ = max(tile_m * tile_n // 64, 128)
+    thread_num = thread_num_ * max((tile_m * tile_n * tile_k) // thread_num_ // 256, 1)
+    aligns = [
+      [
+        min(tile_m * tile_k // thread_num, 4),
+        min(tile_n * tile_k // thread_num, 4),
+        min(tile_m * tile_n // thread_num, 4)
+      ],
+      [1, 1, 1]
+    ]
+    for align_a, align_b, align_c in aligns:
+
+      layouts = [
+        [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+        [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+        [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+        [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+        [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+        [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+        [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+        [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+      ]
+
+      CreateGemmUniversal3xOperator(manifest, layouts, [tile_description], data_types, schedules_default)
+
+def GenerateMP31_TensorOp_gemm_tf32(manifest, musa_version):
+  math_inst = MathInstruction(
+                [0, 0, 0],
+                DataType.tf32, DataType.tf32, DataType.f32,
+                OpcodeClass.TensorOp)
+
+  min_cc = 31
+  max_cc = 31
+
+  both_k_major_tile_descriptions = [
+    TileDescription([128, 64,  32], 3, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 32], 5, math_inst, min_cc, max_cc),
+    TileDescription([256, 128, 16], 4, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 16], 5, math_inst, min_cc, max_cc),
+    TileDescription([384, 256, 16], 4, math_inst, min_cc, max_cc),
+  ]
+  not_all_k_major_tile_descriptions = [
+    TileDescription([128, 64,  32], 3, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 32], 5, math_inst, min_cc, max_cc),
+    TileDescription([192, 128, 16], 4, math_inst, min_cc, max_cc),
+  ]
+
+  cd_types = [
+    (math_inst.element_accumulator, math_inst.element_accumulator),
+    (DataType.void, math_inst.element_accumulator),
+  ]
+  data_type = {
+    "a_type"   : math_inst.element_a,
+    "b_type"   : math_inst.element_b,
+    "c_type"   : math_inst.element_accumulator,
+    "d_type"   : math_inst.element_accumulator,
+    "acc_type" : math_inst.element_accumulator,
+    "epi_type" : math_inst.element_accumulator
+  }
+
+  schedules_default = [
+    [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+  ]
+
+  aligns = [
+    [1, 1, 1],
+  ]
+  data_types = []
+  for cd_type in cd_types:
+    data_type_ = data_type.copy()
+    data_type_["c_type"] = cd_type[0]
+    data_type_["d_type"] = cd_type[1]
+    data_types.append(data_type_)
+  for align_a, align_b, align_c in aligns:
+    layouts = [
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+    ]
+
+    for layout in layouts:
+      if layout[0][0] == LayoutType.RowMajor and layout[1][0] == LayoutType.ColumnMajor:
+        for tile_description in both_k_major_tile_descriptions:
+          tile_description.math_instruction.instruction_shape = [
+            min(128, tile_description.threadblock_shape[0]),
+            min(128, tile_description.threadblock_shape[1]),
+            min(32, tile_description.threadblock_shape[2]),
+          ]
+        CreateGemmUniversal3xOperator(manifest, [layout], [tile_description], data_types, schedules_default)
+      else:
+        for tile_description in not_all_k_major_tile_descriptions:
+          tile_description.math_instruction.instruction_shape = [
+            min(64, tile_description.threadblock_shape[0]),
+            min(64, tile_description.threadblock_shape[1]),
+            min(32, tile_description.threadblock_shape[2]),
+          ]
+        CreateGemmUniversal3xOperator(manifest, [layout], [tile_description], data_types, schedules_default)
+
+def GenerateMP31_TensorOp_gemm_f16(manifest, musa_version):
+  math_inst = MathInstruction(
+                [0, 0, 0],
+                DataType.f16, DataType.f16, DataType.f32,
+                OpcodeClass.TensorOp)
+
+  min_cc = 31
+  max_cc = 31
+
+  tile_descriptions = [
+    TileDescription([128, 64,  64], 3, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 64], 5, math_inst, min_cc, max_cc),
+    TileDescription([256, 128, 32], 4, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 32], 5, math_inst, min_cc, max_cc),
+    TileDescription([384, 256, 32], 4, math_inst, min_cc, max_cc),
+  ]
+
+  for tile_description in tile_descriptions:
+    tile_description.math_instruction.instruction_shape = [
+      min(128, tile_description.threadblock_shape[0]),
+      min(128, tile_description.threadblock_shape[1]),
+      min(64, tile_description.threadblock_shape[2]),
+    ]
+  cd_types = [
+    (math_inst.element_accumulator, math_inst.element_accumulator),
+    (math_inst.element_a, math_inst.element_a),
+    (DataType.void, math_inst.element_accumulator),
+    (DataType.void, math_inst.element_a),
+  ]
+  data_type = {
+    "a_type"   : math_inst.element_a,
+    "b_type"   : math_inst.element_b,
+    "c_type"   : math_inst.element_accumulator,
+    "d_type"   : math_inst.element_accumulator,
+    "acc_type" : math_inst.element_accumulator,
+    "epi_type" : math_inst.element_accumulator
+  }
+
+
+  schedules_default = [
+    [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+  ]
+
+  aligns = [
+    [2, 2, 2],
+  ]
+  data_types = []
+  for cd_type in cd_types:
+    data_type_ = data_type.copy()
+    data_type_["c_type"] = cd_type[0]
+    data_type_["d_type"] = cd_type[1]
+    data_types.append(data_type_)
+  for align_a, align_b, align_c in aligns:
+    layouts = [
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+    ]
+
+    CreateGemmUniversal3xOperator(manifest, layouts, tile_descriptions, data_types, schedules_default)
+
+def GenerateMP31_TensorOp_gemm_bf16(manifest, musa_version):
+  math_inst = MathInstruction(
+                [0, 0, 0],
+                DataType.bf16, DataType.bf16, DataType.f32,
+                OpcodeClass.TensorOp)
+
+  min_cc = 31
+  max_cc = 31
+
+  tile_descriptions = [
+    TileDescription([128, 64,  64], 3, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 64], 5, math_inst, min_cc, max_cc),
+    TileDescription([256, 128, 32], 4, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 32], 5, math_inst, min_cc, max_cc),
+    TileDescription([384, 256, 32], 4, math_inst, min_cc, max_cc),
+  ]
+
+  for tile_description in tile_descriptions:
+    tile_description.math_instruction.instruction_shape = [
+      min(128, tile_description.threadblock_shape[0]),
+      min(128, tile_description.threadblock_shape[1]),
+      min(64, tile_description.threadblock_shape[2]),
+    ]
+
+  cd_types = [
+    (math_inst.element_accumulator, math_inst.element_accumulator),
+    (math_inst.element_a, math_inst.element_a),
+    (DataType.void, math_inst.element_accumulator),
+    (DataType.void, math_inst.element_a),
+  ]
+  data_type = {
+    "a_type"   : math_inst.element_a,
+    "b_type"   : math_inst.element_b,
+    "c_type"   : math_inst.element_accumulator,
+    "d_type"   : math_inst.element_accumulator,
+    "acc_type" : math_inst.element_accumulator,
+    "epi_type" : math_inst.element_accumulator
+  }
+
+  schedules_default = [
+    [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+  ]
+
+  aligns = [
+    [2, 2, 2],
+  ]
+
+  data_types = []
+  for cd_type in cd_types:
+    data_type_ = data_type.copy()
+    data_type_["c_type"] = cd_type[0]
+    data_type_["d_type"] = cd_type[1]
+    data_types.append(data_type_)
+  for align_a, align_b, align_c in aligns:
+    layouts = [
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+    ]
+
+    CreateGemmUniversal3xOperator(manifest, layouts, tile_descriptions, data_types, schedules_default)
+
+def GenerateMP31_TensorOp_gemm_s8(manifest, musa_version):
+  math_inst = MathInstruction(
+                [0, 0 , 0],
+                DataType.s8, DataType.s8, DataType.s32,
+                OpcodeClass.TensorOp)
+
+  min_cc = 31
+  max_cc = 31
+
+  tile_descriptions = [
+    TileDescription([128, 64,  128], 3, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 128], 5, math_inst, min_cc, max_cc),
+    TileDescription([256, 128, 64], 4, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 64], 5, math_inst, min_cc, max_cc),
+    TileDescription([384, 256, 64], 4, math_inst, min_cc, max_cc),
+  ]
+
+  for tile_description in tile_descriptions:
+    tile_description.math_instruction.instruction_shape = [
+      min(128, tile_description.threadblock_shape[0]),
+      min(128, tile_description.threadblock_shape[1]),
+      min(128, tile_description.threadblock_shape[2]),
+    ]
+
+  cd_types = [
+    (math_inst.element_accumulator, math_inst.element_accumulator),
+    (DataType.void, math_inst.element_accumulator),
+  ]
+  data_type = {
+    "a_type"   : math_inst.element_a,
+    "b_type"   : math_inst.element_b,
+    "c_type"   : math_inst.element_accumulator,
+    "d_type"   : math_inst.element_accumulator,
+    "acc_type" : math_inst.element_accumulator,
+    "epi_type" : math_inst.element_accumulator
+  }
+
+  schedules_default = [
+    [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+  ]
+
+  aligns = [
+    [8, 8, 8],
+  ]
+
+  data_types = []
+  for cd_type in cd_types:
+    data_type_ = data_type.copy()
+    data_type_["c_type"] = cd_type[0]
+    data_type_["d_type"] = cd_type[1]
+    data_types.append(data_type_)
+
+  for align_a, align_b, align_c in aligns:
+    layouts = [
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+    ]
+
+    CreateGemmUniversal3xOperator(manifest, layouts, tile_descriptions, data_types, schedules_default)
+
+
 #
 def GenerateMP22(manifest, musa_version):
   GenerateMP22_Simt_gemm_f32(manifest, musa_version)
@@ -437,6 +752,13 @@ def GenerateMP22(manifest, musa_version):
   GenerateMP22_TensorOp_gemm_f16(manifest, musa_version)
   GenerateMP22_TensorOp_gemm_bf16(manifest, musa_version)
   GenerateMP22_TensorOp_gemm_s8(manifest, musa_version)
+
+def GenerateMP31(manifest, musa_version):
+  # GenerateMP31_Simt_gemm_f32(manifest, musa_version)
+  GenerateMP31_TensorOp_gemm_tf32(manifest, musa_version)
+  GenerateMP31_TensorOp_gemm_f16(manifest, musa_version)
+  GenerateMP31_TensorOp_gemm_bf16(manifest, musa_version)
+  GenerateMP31_TensorOp_gemm_s8(manifest, musa_version)
 
 ###################################################################################################
 
@@ -487,6 +809,7 @@ if __name__ == "__main__":
 
   manifest = Manifest(args)
   GenerateMP22(manifest, args.musa_version)
+  GenerateMP31(manifest, args.musa_version)
   if 'library' in args.generator_target.split(','):
     manifest.emit(GeneratorTarget.Library)
 

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -131,6 +131,15 @@ struct IsThreadEpilogueOpWithActivation <ThreadEpilogueOp, mute::enable_if_t<Thr
   static constexpr bool value = true;
   using type = typename ThreadEpilogueOp::ActivationFn;
 };
+
+template <typename ThreadEpilogueOp, typename = void>
+struct IsThreadEpilogueOpWithElementwiseArguments : mute::false_type {};
+
+template <typename ThreadEpilogueOp>
+struct IsThreadEpilogueOpWithElementwiseArguments<
+        ThreadEpilogueOp,
+        mute::void_t<typename ThreadEpilogueOp::ElementwiseOp::Arguments>> : mute::true_type {};
+
 
 } // namespace detail
 } // namespace collective

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -154,6 +154,11 @@ struct IsDefaultEpilogue<mutlass::epilogue::collective::Epilogue<args...>> {
   static constexpr bool value = true;
 };
 
+template<class ...args>
+struct IsDefaultEpilogue<mutlass::epilogue::collective::CollectiveEpilogue<args...>> {
+  static constexpr bool value = true;
+};
+
 
 // The number of splits to test.
 //
@@ -250,7 +255,7 @@ bool initialize_tensor(
   return true;
 }
 
-// Looks at Cute Stride to check Row / Column Major
+// Looks at Mute Stride to check Row / Column Major
 template<typename Stride>
 static constexpr bool is_row_or_col_major(){
   int stride_0 = int(mute::size<0>(Stride{}));
@@ -1394,7 +1399,7 @@ struct TestbedImpl {
     return true;
   }
 
-  /// Exemutes one test
+  /// Executes one test
   bool run(
     ProblemShapeType problem_size,
     ElementScalar alpha = ElementScalar(1),
@@ -1539,7 +1544,7 @@ struct Testbed3x {
       uint64_t seed_ = TestBedImpl::kDefaultSeed)
       : impl_(check_relative_equality_, use_device_scalars_, disable_vector_beta_, init_A_, init_B_, init_C_, init_scale_, init_bias_, seed_) {}
 
-  /// Exemutes one test
+  /// Executes one test
   bool run(
    typename TestBedImpl::ProblemShapeType problem_size,
     ElementScalar alpha = ElementScalar(1),

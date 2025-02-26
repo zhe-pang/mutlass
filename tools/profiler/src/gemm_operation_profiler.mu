@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -71,6 +71,8 @@ GemmOperationProfiler::GemmOperationProfiler(Options const &options):
       {ArgumentTypeID::kScalar, {"alpha", "epilogue::alpha"}, "Epilogue scalar alpha"},
       {ArgumentTypeID::kScalar, {"beta", "epilogue::beta"}, "Epilogue scalar beta"},
       {ArgumentTypeID::kInteger, {"batch_count", "batch-count"}, "Number of GEMMs computed in one batch"},
+      {ArgumentTypeID::kEnumerated, {"raster_order", "raster-order"}, "Raster order (heuristic, along_n, along_m)"},
+      {ArgumentTypeID::kInteger, {"swizzle_size", "swizzle-size"}, "Size to swizzle"},
     },
     {}
   ) {
@@ -172,6 +174,19 @@ Status GemmOperationProfiler::GemmProblem::parse(
     this->batch_count = 1;
   } else if (this->batch_count > 1) {
     this->mode = library::GemmUniversalMode::kBatched;
+  }
+
+  if (!arg_as_int(this->swizzle_size, "swizzle_size", problem_space, problem)) {
+    // default value
+    this->swizzle_size = 4;
+    if (this->swizzle_size <= 0) {
+      return Status::kErrorInvalidProblem;
+    }
+  }
+
+  if (!arg_as_RasterOrder(this->raster_order, "raster_order", problem_space, problem)) {
+    // default value
+    this->raster_order = library::RasterOrder::kHeuristic;
   }
 
   if (!tensor_description_satisfies(operation_desc.A, "A", problem_space, problem)) {
@@ -299,6 +314,8 @@ void GemmOperationProfiler::GemmProblem::initialize_result(
   set_argument(result, "k", problem_space, k);
 
   set_argument(result, "batch_count", problem_space, batch_count);
+  set_argument(result, "raster_order", problem_space, library::to_string(raster_order));
+  set_argument(result, "swizzle_size", problem_space, swizzle_size);
   set_argument(result, "alpha", problem_space,
     library::lexical_cast(alpha, operation_desc.element_epilogue));
 
@@ -353,6 +370,8 @@ Status GemmOperationProfiler::initialize_configuration(
   gemm_workspace_.arguments.alpha = problem_.alpha.data();
   gemm_workspace_.arguments.beta = problem_.beta.data();
   gemm_workspace_.arguments.pointer_mode = library::ScalarPointerMode::kHost;
+  gemm_workspace_.arguments.swizzle_size = problem_.swizzle_size;
+  gemm_workspace_.arguments.raster_order = problem_.raster_order;
 
   initialize_result_(this->model_result_, options, operation_desc, problem_space);
   
@@ -392,6 +411,17 @@ Status GemmOperationProfiler::initialize_workspace(
   ProblemSpace const &problem_space,
   ProblemSpace::Problem const &problem) {
 
+  if (options.device.devices.size() != 1) {
+    throw std::runtime_error("This operation profiler only supports a single "
+                             "device.");
+  }
+
+  musaError_t result;
+  result = musaSetDevice(options.device.device_id(0));
+  if (result != musaSuccess) {
+    throw std::runtime_error("musaSetDevice() failed.");
+  }
+
   library::Operation const* underlying_operation = operation;
 
 
@@ -401,9 +431,9 @@ Status GemmOperationProfiler::initialize_workspace(
   // Compute the number of copies of the problem to avoid L2 camping.
   if (!options.profiling.workspace_count) {
     int64_t bytes = problem_.bytes(operation_desc);
-    if (bytes < 3 * int64_t(options.device.properties.l2CacheSize)) {
+    if (bytes < 3 * int64_t(options.device.properties[0].l2CacheSize)) {
       gemm_workspace_.problem_count = 
-        1 + int((3 * int64_t(options.device.properties.l2CacheSize)) / bytes);
+        1 + int((3 * int64_t(options.device.properties[0].l2CacheSize)) / bytes);
     }
     else {
       gemm_workspace_.problem_count = 1;
@@ -416,7 +446,7 @@ Status GemmOperationProfiler::initialize_workspace(
   bool allocate_device_tensors = options.execution_mode != ExecutionMode::kDryRun;
   if (allocate_device_tensors) {
     int seed_shift = 0;
-    gemm_workspace_.A = device_context.allocate_tensor(
+    gemm_workspace_.A = device_context.allocate_and_initialize_tensor(
       options,
       "A",
       operation_desc.A.element,
@@ -424,10 +454,11 @@ Status GemmOperationProfiler::initialize_workspace(
       {int(problem_.m), int(problem_.k)},
       {int(problem_.lda)},
       problem_.batch_count * gemm_workspace_.problem_count,
-      seed_shift++
+      seed_shift++,
+      0 // device_index
     );
 
-    gemm_workspace_.B = device_context.allocate_tensor(
+    gemm_workspace_.B = device_context.allocate_and_initialize_tensor(
       options,
       "B",
       operation_desc.B.element,
@@ -435,10 +466,11 @@ Status GemmOperationProfiler::initialize_workspace(
       {int(problem_.k), int(problem_.n)},
       {int(problem_.ldb)},
       problem_.batch_count * gemm_workspace_.problem_count,
-      seed_shift++
+      seed_shift++,
+      0 // device_index
     );
 
-    gemm_workspace_.C = device_context.allocate_tensor(
+    gemm_workspace_.C = device_context.allocate_and_initialize_tensor(
       options,
       "C",
       operation_desc.C.element,
@@ -446,25 +478,30 @@ Status GemmOperationProfiler::initialize_workspace(
       {int(problem_.m), int(problem_.n)},
       {int(problem_.ldc)},
       problem_.batch_count * gemm_workspace_.problem_count,
-      seed_shift++
+      seed_shift++,
+      0 // device_index
     );
 
     gemm_workspace_.Computed = device_context.allocate_tensor(
+      options,
       "D",
       operation_desc.D.element,
       operation_desc.D.layout,
       {int(problem_.m), int(problem_.n)},
       {int(problem_.ldc)},
-      problem_.batch_count * gemm_workspace_.problem_count
+      problem_.batch_count * gemm_workspace_.problem_count,
+      0 // device_index
     );
 
     gemm_workspace_.Reference = device_context.allocate_tensor(
+      options,
       "Reference",
       operation_desc.D.element,
       operation_desc.D.layout,
       {int(problem_.m), int(problem_.n)},
       {int(problem_.ldc)},
-      problem_.batch_count * gemm_workspace_.problem_count
+      problem_.batch_count * gemm_workspace_.problem_count,
+      0 // device_index
     );
   }
 
@@ -482,7 +519,7 @@ Status GemmOperationProfiler::initialize_workspace(
     gemm_workspace_.arguments.batch_stride_D = gemm_workspace_.Computed->batch_stride();
 
     /* Query device SM count to pass onto the kernel as an argument, where needed */
-    gemm_workspace_.arguments.sm_count = options.device.properties.multiProcessorCount;
+    gemm_workspace_.arguments.sm_count = options.device.properties[0].multiProcessorCount;
   }
 
   //
@@ -565,7 +602,6 @@ bool GemmOperationProfiler::verify_mutlass(
 
  // initialize gemm underlying operation to handle parallel reduction
   library::Operation const * underlying_operation = operation;
-
 
   results_.back().status = underlying_operation->run(
     &gemm_workspace_.arguments, 
@@ -989,7 +1025,7 @@ Status GemmOperationProfiler::profile_mutlass_(
     gemm_workspace_.arguments.C = gemm_workspace_.C->batch_data(problem_idx);
     gemm_workspace_.arguments.D = gemm_workspace_.Computed->batch_data(problem_idx);
 
-    // Exemute the MUTLASS operation
+    // Execute the MUTLASS operation
     status = underlying_operation->run(
       &gemm_workspace_.arguments,
       host_workspace,

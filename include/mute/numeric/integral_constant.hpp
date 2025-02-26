@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,9 +31,9 @@
  **************************************************************************************************/
 #pragma once
 
-#include "mute/util/print.hpp"
-#include "mute/util/type_traits.hpp"
-#include "mute/numeric/math.hpp"
+#include <mute/numeric/math.hpp>      // mute::max, etc
+#include <mute/util/print.hpp>        // mute::print
+#include <mute/util/type_traits.hpp>  // __MUTE_REQUIRES, mute::is_std_integral
 
 namespace mute
 {
@@ -394,6 +394,19 @@ conditional_return(false_type, TrueType&&, FalseType&& f) {
   return static_cast<FalseType&&>(f);
 }
 
+template <auto v>
+MUTE_HOST_DEVICE constexpr
+auto
+conditional_return(bool b, C<v> const&, C<v> const&) {
+  return C<v>{};
+}
+
+template <auto v, auto u>
+MUTE_HOST_DEVICE constexpr
+auto
+conditional_return(bool b, C<v> const&, C<u> const&) {
+  return b ? v : u;
+}
 // TrueType and FalseType must have a common type
 template <class TrueType, class FalseType>
 MUTE_HOST_DEVICE constexpr

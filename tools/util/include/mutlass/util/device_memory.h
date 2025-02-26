@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -62,8 +62,21 @@ T* allocate(size_t count = 1) {
   musaError_t musa_error = musaMalloc((void**)&ptr, bytes);
 
   if (musa_error != musaSuccess) {
+#if (MUTLASS_DEBUG_TRACE_LEVEL > 0)
+    std::ostringstream os;
+    os << "mutlass::device_memory::allocate: musaMalloc failed: bytes=" << bytes;
+    MUTLASS_TRACE_HOST(os.str());
+#endif
     throw musa_exception("Failed to allocate memory", musa_error);
   }
+
+#if (MUTLASS_DEBUG_TRACE_LEVEL > 1)
+  else {
+    std::ostringstream os;
+    os << "mutlass::device_memory::allocate: Successful musaMalloc: bytes=" << bytes;
+    MUTLASS_TRACE_HOST(os.str());
+  }
+#endif
 
   return ptr;
 }
@@ -86,8 +99,9 @@ void free(T* ptr) {
 template <typename T>
 void copy(T* dst, T const* src, size_t count, musaMemcpyKind kind) {
   size_t bytes = count * sizeof_bits<T>::value / 8;
-  if (bytes == 0 && count > 0)
+  if (bytes == 0 && count > 0) {
     bytes = 1;
+  }
   musaError_t musa_error = (musaMemcpy(dst, src, bytes, kind));
   if (musa_error != musaSuccess) {
     throw musa_exception("musaMemcpy() failed", musa_error);

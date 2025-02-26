@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,21 +47,29 @@ using namespace mute;
 struct TT_Traits {
   using AStride = GenRowMajor;
   using BStride = GenColMajor;
+  static constexpr TCE::Major AMajor = TCE::Major::K;
+  static constexpr TCE::Major BMajor = TCE::Major::MN;
 };
 
 struct TN_Traits {
   using AStride = GenRowMajor;
   using BStride = GenRowMajor;
+  static constexpr TCE::Major AMajor = TCE::Major::K;
+  static constexpr TCE::Major BMajor = TCE::Major::K;
 };
 
 struct NT_Traits {
   using AStride = GenColMajor;
   using BStride = GenColMajor;
+  static constexpr TCE::Major AMajor = TCE::Major::MN;
+  static constexpr TCE::Major BMajor = TCE::Major::MN;
 };
 
 struct NN_Traits {
   using AStride = GenColMajor;
   using BStride = GenRowMajor;
+  static constexpr TCE::Major AMajor = TCE::Major::MN;
+  static constexpr TCE::Major BMajor = TCE::Major::K;
 };
 
 template <class MMA_Op>
@@ -104,7 +112,7 @@ __global__ void mma_inst(AccType* C, SrcTypeA* A, SrcTypeB* B) {
   copy(tCgA, tCrA_copy_view);
   copy(tCgB, tCrB_copy_view);
   mute::gemm(tiled_mma, accum, tCrA, tCrB, accum);
-  
+
   copy(accum, tCgC);
 }
 
@@ -134,38 +142,38 @@ bool initialize_block(
   return true;
 }
 
-template <class MmaOp>
-bool mma_test_body() {                                                              
-  using TiledMma = TiledMMA<MMA_Atom<MmaOp>, Layout<Shape<_1, _1, _1>>>;            
-  using OpStride = StrideTraits<MmaOp>;                                             
-                                                                                      
-  using Atom_MNK = typename TiledMma::AtomShape_MNK;                                  
-  using AType = typename TiledMma::FrgTypeA;                                          
-  using BType = typename TiledMma::FrgTypeB;                                          
-  using CType = typename TiledMma::FrgTypeC;                                          
-  using DType = typename TiledMma::FrgTypeD;  
+template <class MmaOp, class Traits>
+bool mma_test_body() {
+  using TiledMma = TiledMMA<MMA_Atom<MmaOp>, Layout<Shape<_1, _1, _1>>>;
+  using Atom_MNK = typename TiledMma::AtomShape_MNK;
+  using AType = typename TiledMma::FrgTypeA;
+  using BType = typename TiledMma::FrgTypeB;
+  using CType = typename TiledMma::FrgTypeC;
+  using DType = typename TiledMma::FrgTypeD;
+  constexpr int32_t warp_size = size(TiledMma{});
+  if constexpr (warp_size == 128) {
+    static_assert(std::is_same<AType, BType>::value);
+  }
+  static_assert(std::is_same<CType, DType>::value);
 
-  static_assert(std::is_same<AType, BType>::value);                                                             
-  static_assert(std::is_same<CType, DType>::value);                                   
-                                                                                      
-  auto M = size<0>(Atom_MNK{});                                                       
-  auto N = size<1>(Atom_MNK{});                                                       
-  auto K = size<2>(Atom_MNK{});                                                       
-                                                                                      
-  std::vector<AType> vector_A;                                                      
-  std::vector<BType> vector_B;                                                      
-  std::vector<CType> vector_C;                                                      
-  std::vector<CType> vector_C_ref;  
+  auto M = size<0>(Atom_MNK{});
+  auto N = size<1>(Atom_MNK{});
+  auto K = size<2>(Atom_MNK{});
+
+  std::vector<AType> vector_A;
+  std::vector<BType> vector_B;
+  std::vector<CType> vector_C;
+  std::vector<CType> vector_C_ref;
 
   mutlass::DeviceAllocation<AType> block_A;
   mutlass::DeviceAllocation<BType> block_B;
   mutlass::DeviceAllocation<CType> block_C;
-  mutlass::DeviceAllocation<DType> block_C_ref;   
+  mutlass::DeviceAllocation<DType> block_C_ref;
 
   block_A.reset(M * K);
   block_B.reset(N * K);
   block_C.reset(M * N);
-  block_C_ref.reset(M * N);    
+  block_C_ref.reset(M * N);
 
   vector_A.resize(M * K);
   vector_B.resize(N * K);
@@ -180,9 +188,9 @@ bool mma_test_body() {
   block_B.copy_from_host(vector_B.data());
   block_C.copy_from_host(vector_C.data());
   block_C_ref.copy_from_host(vector_C_ref.data());
-                                                  
-  auto tA = make_tensor(vector_A.data(), make_shape(M, K), typename OpStride::AStride{});
-  auto tB = make_tensor(vector_B.data(), make_shape(N, K), typename OpStride::BStride{});
+
+  auto tA = make_tensor(vector_A.data(), make_shape(M, K), typename Traits::AStride{});
+  auto tB = make_tensor(vector_B.data(), make_shape(N, K), typename Traits::BStride{});
   auto tC = make_tensor(vector_C_ref.data(), make_shape(M, N), GenRowMajor{});
   auto tC_ = make_tensor(vector_C.data(), make_shape(M, N), GenRowMajor{});
 
@@ -195,19 +203,19 @@ bool mma_test_body() {
       }
       tC(i, j) = acc;
     }
-  }                                                                                                                            
-                                                                                    
-  mma_inst<TiledMma, OpStride><<<1, 128>>>(block_C.get(), block_A.get(), block_B.get());   
+  }
+
+  mma_inst<TiledMma, Traits><<<1, warp_size>>>(block_C.get(), block_A.get(), block_B.get());
 
   musaError_t result = musaDeviceSynchronize();
   if (result != musaSuccess) {
     std::cerr << "Error running RR MMA INST UT. Last MUSA error is: "
               << musaGetErrorString(result) << std::endl;
     return false;
-  }                         
-   
-  block_C.copy_to_host(vector_C.data());                                                                 
-                                                                                      
+  }
+
+  block_C.copy_to_host(vector_C.data());
+
   musaDeviceSynchronize();
 
   for (int i = 0; i < M * N; ++i) {

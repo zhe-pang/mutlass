@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,16 +31,12 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mute/config.hpp>
-
-#include <mute/util/type_traits.hpp>
-#include <mute/numeric/numeric_types.hpp>        // sizeof_bits
-#include <mute/numeric/math.hpp>
-#include <mute/numeric/integral_constant.hpp>
-
-#include <mute/container/array_subbyte.hpp>
-
-#include <mute/pointer_base.hpp>
+#include <mute/config.hpp>                     // MUTE_HOST_DEVICE
+#include <mute/pointer_base.hpp>               // mute::iter_adaptor
+#include <mute/pointer_sparse.hpp>
+#include <mute/container/array_subbyte.hpp>    // mute::subbyte_iterator
+#include <mute/numeric/integral_constant.hpp>  // mute::true_type, mute::false_type
+#include <mute/numeric/numeric_types.hpp>      // sizeof_bits
 namespace mute
 {
 
@@ -50,6 +46,9 @@ namespace mute
 // Subbyte Types: uint2_t, uint4_t, etc
 //   Requires construction of a subbyte_iterator<T> in order to properly
 //   resolve each element in byte-addressed memory.
+// Sparse Types: sparse_elem<int S, class T>
+//   A type that holds one physical element meant to represent S number of logical elements.
+//   Requires construction of a sparse_ptr that emulates access to the S logical elements.
 //
 
 template <class NewT>
@@ -57,6 +56,11 @@ MUTE_HOST_DEVICE constexpr
 auto
 recast_ptr(void* ptr)
 {
+  if constexpr (is_sparse<NewT>::value) {
+    constexpr int sparsity = NewT::sparsity;
+    NewT* p = reinterpret_cast<NewT*>(ptr);
+    return make_sparse_ptr<sparsity>(p);
+  } else
   if constexpr (mute::is_subbyte_v<NewT>) {
     return subbyte_iterator<NewT>(ptr);
   } else {
@@ -70,6 +74,11 @@ MUTE_HOST_DEVICE constexpr
 auto
 recast_ptr(void const* ptr)
 {
+  if constexpr (is_sparse<NewT>::value) {
+    constexpr int sparsity = NewT::sparsity;
+    NewT const* p = reinterpret_cast<NewT const*>(ptr);
+    return make_sparse_ptr<sparsity>(p);
+  } else
   if constexpr (mute::is_subbyte_v<NewT>) {
     return subbyte_iterator<NewT const>(ptr);
   } else {
@@ -204,6 +213,16 @@ auto
 make_smem_ptr(void const* ptr) {
   return make_smem_ptr(recast_ptr<T const>(ptr));
 }
+
+
+// nullptr_t overload for make_smem_ptr<float>(nullptr) disambiguation
+template <class T>
+MUTE_HOST_DEVICE constexpr
+auto
+make_smem_ptr(decltype(nullptr)) { // nullptr_t
+  return make_smem_ptr(recast_ptr<T>(nullptr));
+}
+
 
 // The smem tag is invariant over type-recast
 template <class NewT, class P>

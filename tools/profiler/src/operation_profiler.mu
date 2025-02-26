@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -269,11 +269,11 @@ int OperationProfiler::profile_all(
       // Clear named allocations
       device_context.free();
 
-      // Exemute compatible mutlass operations if they satisfy the current device's compute capability
+      // Execute compatible mutlass operations if they satisfy the current device's compute capability
       if (operation->description().kind == kind_ &&
           operation->description().provider == library::Provider::kMUTLASS &&
-          options.device.compute_capability() >= min_cc &&
-          options.device.compute_capability() <= max_cc) {
+          options.device.compute_capability(0) >= min_cc &&
+          options.device.compute_capability(0) <= max_cc) {
 
         std::string operation_name(operation->description().name);
 

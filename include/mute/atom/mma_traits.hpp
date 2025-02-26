@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -147,8 +147,8 @@ mma_unpack(MMA_Traits<MMA_Op, MMA_Args...> const& traits,
 
   if constexpr (is_same<RegTypeD, void>::value)
   {
-    static_assert(is_same<typename TD::value_type, typename TC::value_type>::value, "GMMA C and D value_type must match.");
-    static_assert(is_same<DLayout, CLayout>::value, "GMMA C and D layouts must match.");
+    static_assert(is_same<typename TD::value_type, typename TC::value_type>::value, "SQMMA C and D value_type must match.");
+    static_assert(is_same<DLayout, CLayout>::value, "SQMMA C and D layouts must match.");
     // assert((void*)&C == (void*)&D);
 
     Tensor rC = recast<RegTypeC>(D);  // NOTE: D and C are same, so use mutable D
@@ -156,11 +156,7 @@ mma_unpack(MMA_Traits<MMA_Op, MMA_Args...> const& traits,
     //MUTE_STATIC_ASSERT_V(size(rC) == Int<RegNumC>{});
 
     if constexpr (detail::supports_output_scaling<MMATraits>::value) {
-      detail::explode(MMA_Op::fma,
-                      rA, make_int_sequence<RegNumA>{},
-                      rB, make_int_sequence<RegNumB>{},
-                      rC, make_int_sequence<RegNumC>{},
-                      &(traits.accumulate_), seq<0>{});
+      MMA_Op::fma(rA.data(), rB.data(), rC.data(), traits.accumulate_);
     }
     else {
       detail::explode(MMA_Op::fma,
@@ -170,30 +166,24 @@ mma_unpack(MMA_Traits<MMA_Op, MMA_Args...> const& traits,
     }
   }
   else {
-      Tensor rD = recast<RegTypeD>(D);
-      Tensor rC = recast<RegTypeC>(C);
+    Tensor rD = recast<RegTypeD>(D);
+    Tensor rC = recast<RegTypeC>(C);
 
-      MUTE_STATIC_ASSERT_V(size(rD) == Int<RegNumD>{});
-      MUTE_STATIC_ASSERT_V(size(rC) == Int<RegNumC>{});
-      if constexpr (detail::supports_output_scaling<MMATraits>::value) {
+    MUTE_STATIC_ASSERT_V(size(rD) == Int<RegNumD>{});
+    MUTE_STATIC_ASSERT_V(size(rC) == Int<RegNumC>{});
+    if constexpr (detail::supports_output_scaling<MMATraits>::value) {
+      MMA_Op::fma(rD.data(), rA.data(), rB.data(), rC.data(), traits.accumulate_);
+    } else {
+      if constexpr (is_same<MMA_Op, UniversalFMAOp>::value) {
         detail::explode(MMA_Op::fma,
-                        rD, make_int_sequence<RegNumD>{},
-                        rA, make_int_sequence<RegNumA>{},
-                        rB, make_int_sequence<RegNumB>{},
-                        rC, make_int_sequence<RegNumC>{},
-                        &(traits.accumulate_), seq<0>{});
+                  rD, make_int_sequence<RegNumD>{},
+                  rA, make_int_sequence<RegNumA>{},
+                  rB, make_int_sequence<RegNumB>{},
+                  rC, make_int_sequence<RegNumC>{});
       } else {
-        if constexpr (is_same<MMA_Op, UniversalFMAOp>::value) {
-          detail::explode(MMA_Op::fma,
-                    rD, make_int_sequence<RegNumD>{},
-                    rA, make_int_sequence<RegNumA>{},
-                    rB, make_int_sequence<RegNumB>{},
-                    rC, make_int_sequence<RegNumC>{});
-        } else {
-          // TODO(all): ad-hoc for mcc builtin mma functions, adapt it when MUSA IR is ready
-          MMA_Op::fma(rD.data(), rA.data(), rB.data(), rC.data());
-        }
+        MMA_Op::fma(rD.data(), rA.data(), rB.data(), rC.data());
       }
+    }
   }
 }
 

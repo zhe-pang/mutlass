@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -39,6 +39,15 @@
 namespace mutlass::epilogue {
 
 //////////////////////////////////////////////////////////////////////////////
+//
+// Builder Epilogue Schedules
+//
+//////////////////////////////////////////////////////////////////////////////
+
+struct NoSmem  {};
+struct WithTme {};
+struct EpilogueSimtVectorized {};
+//////////////////////////////////////////////////////////////////////////////
 
 template <
   int Stages_,
@@ -47,6 +56,21 @@ template <
 struct Mp22CollectiveEpilogue {
   constexpr static int Stages = Stages_;
   constexpr static int FragmentSize = FragmentSize_;
+};
+
+template <
+  int StagesC_,
+  int StagesD_,
+  int FragmentSize_,
+  bool ReuseSmemC_,
+  bool DelayTmeStore_ = false
+>
+struct Mp31CollectiveEpilogue {
+  constexpr static int StagesC = StagesC_;
+  constexpr static int StagesD = StagesD_;
+  constexpr static int FragmentSize = FragmentSize_;
+  constexpr static bool ReuseSmemC = ReuseSmemC_;
+  constexpr static bool DelayTmeStore = DelayTmeStore_;
 };
 
 //////////////////////////////////////////////////////////////////////////////

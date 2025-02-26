@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -1085,6 +1085,7 @@ MUTE_HOST std::ostream& operator<<(std::ostream& os, Tensor<Engine,Layout> const
 
 #include <mute/pointer_swizzle.hpp>
 #include <mute/pointer_flagged.hpp>
+#include <mute/tensor_zip.hpp>
 //
 // Tensor Algorithms
 //
@@ -1093,6 +1094,7 @@ MUTE_HOST std::ostream& operator<<(std::ostream& os, Tensor<Engine,Layout> const
 #include <mute/algorithm/fill.hpp>
 #include <mute/algorithm/clear.hpp>
 #include <mute/algorithm/copy.hpp>
+#include <mute/algorithm/prefetch.hpp>
 #include <mute/algorithm/axpby.hpp>
 #include <mute/algorithm/gemm.hpp>
 

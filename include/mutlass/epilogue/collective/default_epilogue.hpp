@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -83,6 +83,7 @@ public:
 
   static const int kOutputAlignment = ThreadEpilogueOp::kCount;
   using AlignmentType = typename mute::uint_bit<sizeof_bits<ElementOutput>::value * kOutputAlignment>::type;
+  static constexpr int NumBarriers = 0;
 
   static_assert(mute::rank(StrideC{}) == 3, "StrideCD must be rank-3: [M, N, L]");
   static_assert(mute::rank(StrideD{}) == 3, "StrideCD must be rank-3: [M, N, L]");

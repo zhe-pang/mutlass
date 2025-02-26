@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,7 +46,6 @@
 namespace mutlass::epilogue::collective {
 
 template <
-  class ArchTag,
   class OpClass,
   class TileShape_MNK,
   class ClusterShape_MNK,
@@ -60,10 +59,11 @@ template <
   class GmemLayoutTagD,
   int AlignmentD,
   class EpilogueScheduleType,
+  class MainloopCollective,
   FloatRoundStyle RoundStyle
 >
 struct CollectiveBuilder<
-  ArchTag,
+  mutlass::arch::Mp22,
   OpClass,
   TileShape_MNK,
   ClusterShape_MNK,
@@ -78,6 +78,7 @@ struct CollectiveBuilder<
   AlignmentD,
   EpilogueScheduleType,
   fusion::LinearCombination<ElementD,ElementCompute,ElementC_,ElementCompute,RoundStyle>,
+  MainloopCollective,
   void
 > {
   // Passing void C disables source load

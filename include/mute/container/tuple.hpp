@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -623,7 +623,12 @@ MUTE_HOST_DEVICE void print_tuple(Tuple const& t,
                                   index_sequence<Is...>, char s = '(', char e = ')')
 {
   using mute::print;
-  ((void(print(Is == 0 ? s : ',')), void(print(get<Is>(t)))), ...); print(e);
+  if (sizeof...(Is) == 0) {
+    print(s);
+  } else {
+    ((void(print(Is == 0 ? s : ',')), void(print(get<Is>(t)))), ...);
+  }
+  print(e);
 }
 
 #if !defined(__MUSACC_RTC__)
@@ -631,7 +636,11 @@ template <class Tuple, std::size_t... Is>
 MUTE_HOST std::ostream& print_tuple_os(std::ostream& os, Tuple const& t,
                                        index_sequence<Is...>, char s = '(', char e = ')')
 {
-  (void(os << (Is == 0 ? s : ',') << get<Is>(t)), ...);
+  if (sizeof...(Is) == 0) {
+    os << s;
+  } else {
+    (void(os << (Is == 0 ? s : ',') << get<Is>(t)), ...);
+  }
   return os << e;
 }
 #endif // !defined(__MUSACC_RTC__)

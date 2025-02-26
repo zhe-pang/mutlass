@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -138,7 +138,7 @@ TEST(MuTe_core, Subbyte_iterator)
 
   {
   array_subbyte<uint8_t, 15> a{};
-  auto tensor = make_tensor(subbyte_iterator<uint8_t>(a.raw_data()), make_shape(15));
+  auto tensor = make_tensor(a.begin(), make_shape(15));
 
   fill(a, uint8_t(13));
   for (int i = 0; i < int(a.size()); ++i) {
@@ -151,7 +151,7 @@ TEST(MuTe_core, Subbyte_iterator)
 
   {
   array_subbyte<int4_t, 15> a{};
-  auto tensor = make_tensor(subbyte_iterator<int4_t>(a.raw_data()), make_shape(15));
+  auto tensor = make_tensor(a.begin(), make_shape(15));
 
   fill(a, int4_t(-5));
   for (int i = 0; i < int(a.size()); ++i) {
@@ -164,7 +164,7 @@ TEST(MuTe_core, Subbyte_iterator)
 
   {
   array_subbyte<uint2_t, 15> a{};
-  auto tensor = make_tensor(subbyte_iterator<uint2_t>(a.raw_data()), make_shape(15));
+  auto tensor = make_tensor(a.begin(), make_shape(15));
 
   fill(a, uint2_t(-5));
   for (int i = 0; i < int(a.size()); ++i) {
@@ -177,7 +177,7 @@ TEST(MuTe_core, Subbyte_iterator)
 
   {
   array_subbyte<bool, 15> a{};
-  auto tensor = make_tensor(subbyte_iterator<bool>(a.raw_data()), make_shape(15));
+  auto tensor = make_tensor(a.begin(), make_shape(15));
 
   fill(a, bool(1));
   for (int i = 0; i < int(a.size()); ++i) {
@@ -194,7 +194,7 @@ TEST(MuTe_core, Const_subbyte_iterator)
 
   {
   array_subbyte<uint8_t, 15> a{};
-  auto tensor = make_tensor(subbyte_iterator<uint8_t const>(a.raw_data()), make_shape(15));
+  auto tensor = make_tensor(a.begin(), make_shape(15));
 
   fill(a, uint8_t(13));
   for (int i = 0; i < int(a.size()); ++i) {
@@ -207,7 +207,7 @@ TEST(MuTe_core, Const_subbyte_iterator)
 
   {
   array_subbyte<int4_t, 15> a{};
-  auto tensor = make_tensor(subbyte_iterator<int4_t const>(a.raw_data()), make_shape(15));
+  auto tensor = make_tensor(a.begin(), make_shape(15));
 
   fill(a, int4_t(-5));
   for (int i = 0; i < int(a.size()); ++i) {
@@ -220,7 +220,7 @@ TEST(MuTe_core, Const_subbyte_iterator)
 
   {
   array_subbyte<uint2_t, 15> a{};
-  auto tensor = make_tensor(subbyte_iterator<uint2_t const>(a.raw_data()), make_shape(15));
+  auto tensor = make_tensor(a.begin(), make_shape(15));
 
   fill(a, uint2_t(-5));
   for (int i = 0; i < int(a.size()); ++i) {
@@ -233,7 +233,7 @@ TEST(MuTe_core, Const_subbyte_iterator)
 
   {
   array_subbyte<bool, 15> a{};
-  auto tensor = make_tensor(subbyte_iterator<bool const>(a.raw_data()), make_shape(15));
+  auto tensor = make_tensor(a.begin(), make_shape(15));
 
   fill(a, bool(1));
   for (int i = 0; i < int(a.size()); ++i) {

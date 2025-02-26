@@ -1,4 +1,4 @@
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -29,12 +29,17 @@
 
 add_subdirectory(core)
 add_subdirectory(quyuan)
+add_subdirectory(mp31)
+add_subdirectory(mma)
+
 
 add_custom_target(
   mutlass_test_unit_mute
   DEPENDS
   mutlass_test_unit_mute_core
   mutlass_test_unit_mute_quyuan
+  mutlass_test_unit_mute_mp31
+  mutlass_test_unit_mute_mma
   )
 
 add_custom_target(
@@ -42,4 +47,6 @@ add_custom_target(
   DEPENDS
   test_unit_mute_core
   test_unit_mute_quyuan
+  test_unit_mute_mp31
+  test_unit_mute_mma
   )

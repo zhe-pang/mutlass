@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -179,8 +179,9 @@ struct Clamp {
 
   MUTLASS_HOST_DEVICE
   T operator()(T const& value, T const& lower_bound, T const& upper_bound) const {
-    maximum<T> mx;
-    minimum<T> mn;
+    constexpr bool PropagateNaN = true;
+    maximum<T, PropagateNaN> mx;
+    minimum<T, PropagateNaN> mn;
 
     return mn(mx(value, lower_bound), upper_bound);
   }
@@ -197,8 +198,9 @@ struct Clamp<Array<T,N>> {
 
   MUTLASS_HOST_DEVICE
   Array<T,N> operator()(Array<T,N> const& values, T const& lower_bound, T const& upper_bound) const {
-    maximum<Array<T,N>> mx;
-    minimum<Array<T,N>> mn;
+    constexpr bool PropagateNaN = true;
+    maximum<Array<T,N>, PropagateNaN> mx;
+    minimum<Array<T,N>, PropagateNaN> mn;
 
     return mn(mx(values, lower_bound), upper_bound);
   }
@@ -227,7 +229,7 @@ struct LeakyReLU {
 
   MUTLASS_HOST_DEVICE
   T operator()(T const& value, Arguments const& args = Arguments()) const {
-    this->operator()(value, args.leaky_alpha);
+    return this->operator()(value, args.leaky_alpha);
   }
 };
 
@@ -254,6 +256,54 @@ struct LeakyReLU<Array<T, N> > {
   MUTLASS_HOST_DEVICE
   Array<T, N> operator()(Array<T, N> const& values, Arguments const& args = Arguments()) const {
     return this->operator()(values, args.leaky_alpha);
+  }
+};
+
+// Y = min((X <= threshold ? 0 : X), upper_bound)
+template <typename T>
+struct ThresholdReLU {
+  static constexpr bool kIsHeavy = false;
+
+  struct Arguments {
+    T threshold = T(0);
+    T upper_bound = MUTLASS_STL_NAMESPACE::numeric_limits<T>::max();
+  };
+
+  MUTLASS_HOST_DEVICE
+  T operator()(T value, T threshold, T upper_bound) const {
+    minimum_with_nan_propagation<T> mn;
+    
+    return mn((value <= threshold ? T(0) : value), upper_bound);
+  }
+
+  MUTLASS_HOST_DEVICE
+  T operator()(T value, Arguments const& args = Arguments()) const {
+    return operator()(value, args.threshold, args.upper_bound);
+  }
+};
+
+template <typename T, int N>
+struct ThresholdReLU<Array<T,N>> {
+  static constexpr bool kIsHeavy = false;
+
+  using Arguments = typename ThresholdReLU<T>::Arguments;
+
+  MUTLASS_HOST_DEVICE
+  Array<T,N> operator()(Array<T,N> const& values, T threshold, T upper_bound) const {
+    ThresholdReLU<T> relu;
+
+    Array<T,N> retvals;
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < N; ++i) {
+      retvals[i] = relu(values[i], threshold, upper_bound);    
+    }
+
+    return retvals;
+  }
+
+  MUTLASS_HOST_DEVICE
+  Array<T,N> operator()(Array<T,N> const& values, Arguments const& args = Arguments()) const {
+    return operator()(values, args.threshold, args.upper_bound);
   }
 };
 
@@ -310,26 +360,7 @@ struct Sigmoid {
 };
 
 template <typename T, int N>
-struct Sigmoid<Array<T, N> > {
-  static const bool kIsHeavy = true;
-
-  MUTLASS_HOST_DEVICE
-  Array<T, N> operator()(Array<T, N> const &value) const {
-    Array<T, N> y;
-    Sigmoid<T> sigmoid_op;
-
-    MUTLASS_PRAGMA_UNROLL
-    for (int i = 0; i < N; ++i) {
-      y[i] = sigmoid_op(value[i]);
-    }
-
-    return y;
-  }
-};
-
-template <int N>
-struct Sigmoid<Array<half_t, N>> {
-  using T = half_t;
+struct Sigmoid<Array<T, N>> {
   static const bool kIsHeavy = true;
 
   MUTLASS_HOST_DEVICE
@@ -379,6 +410,9 @@ struct SiLu<Array<T, N>> {
     return mul(value, sigmoid_op(value));
   }
 };
+
+template <typename T>
+using ScaledSiLu = Scale<SiLu<T>>;
 
 // Hardswish operator introduced by Howard et al. in the following paper
 // "Searching for MobileNetV3" (2019)
@@ -445,6 +479,9 @@ struct HardSwish<Array<half_t, N> > {
     return mul(mul(mn(mx(add(value, T(3)), T(0)), T(6)), value), T(0.16666667f));
   }
 };
+
+template <typename T>
+using ScaledHardSwish = Scale<HardSwish<T>>;
 
 //
 // GELU function definitions implemented as described by
@@ -691,6 +728,57 @@ struct dReLU_Z<Array<T, N>> {
     }
 
     return y;
+  }
+};
+
+// ElementwiseFilter operator
+// Filters by a specific value and maps it to 0.0
+// Used in GEMM + comm
+template <typename T>
+struct ElementwiseFilter {
+
+  static const bool kIsHeavy = false;
+
+  struct Arguments {
+    T value_to_filter = T(-0.0);
+    T filtered_value = T(0.0);
+  };
+
+  MUTLASS_HOST_DEVICE
+  T operator()(T const& value, T const& value_to_filter, T const& filtered_value) const {
+    T res = value == value_to_filter ? filtered_value : value;
+    return res;
+  }
+
+  MUTLASS_HOST_DEVICE
+  T operator()(T const& value, Arguments const& args = Arguments()) const {
+    return this->operator()(value, args.value_to_filter, args.filtered_value);
+  }
+};
+
+template <typename T, int N>
+struct ElementwiseFilter<Array<T, N> > {
+
+  static const bool kIsHeavy = false;
+
+  using Arguments = typename ElementwiseFilter<T>::Arguments;
+
+  MUTLASS_HOST_DEVICE
+  Array<T, N> operator()(Array<T, N> const& values, T const& value_to_filter, T const& filtered_value) const {
+    Array<T, N> y;
+    ElementwiseFilter<T> filter_op;
+
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < int(values.size()); ++i) {
+      y[i] = filter_op(values[i], value_to_filter, filtered_value);
+    }
+
+    return y;
+  }
+
+  MUTLASS_HOST_DEVICE
+  Array<T, N> operator()(Array<T, N> const& values, Arguments const& args = Arguments()) const {
+    return this->operator()(values, args.value_to_filter, args.filtered_value);
   }
 };
 

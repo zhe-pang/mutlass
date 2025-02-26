@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -107,7 +107,11 @@
 #include <musa/std/cstdint>
 #include <musa/std/limits>
 #else
-#include <stdint.h>
+#include <type_traits>
+#include <utility>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 #endif
 
 #if !defined(__MUSACC_RTC__)
@@ -300,35 +304,16 @@ namespace platform {
 
 #if defined(__MUSACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201103L)) || (defined(_MSC_VER) && (_MSC_VER < 1500))
 
-/// std::integral_constant
-template <typename value_t, value_t V>
-struct integral_constant;
-
-/// std::integral_constant
-template <typename value_t, value_t V>
-struct integral_constant {
-  static const value_t value = V;
-
-  typedef value_t value_type;
-  typedef integral_constant<value_t, V> type;
-
-  MUTLASS_HOST_DEVICE operator value_type() const { return value; }
-
-  MUTLASS_HOST_DEVICE const value_type operator()() const { return value; }
-};
-
 #else
 
-using std::integral_constant;
 using std::pair;
 
 #endif
 
-/// The type used as a compile-time boolean with true value.
-typedef integral_constant<bool, true> true_type;
-
-/// The type used as a compile-time boolean with false value.
-typedef integral_constant<bool, false> false_type;
+using MUTLASS_STL_NAMESPACE::integral_constant;
+using MUTLASS_STL_NAMESPACE::bool_constant;
+using MUTLASS_STL_NAMESPACE::true_type;
+using MUTLASS_STL_NAMESPACE::false_type;
 
 #if defined(__MUSACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus <= 201402L)) || (defined(_MSC_VER) && (_MSC_VER < 1900))
 
@@ -356,6 +341,12 @@ using std::nullptr_t;
 //-----------------------------------------------------------------------------
 // Conditional metaprogramming <type_traits>
 //-----------------------------------------------------------------------------
+
+using MUTLASS_STL_NAMESPACE::conditional;
+using MUTLASS_STL_NAMESPACE::conditional_t;
+using MUTLASS_STL_NAMESPACE::enable_if;
+using MUTLASS_STL_NAMESPACE::enable_if_t;
+using MUTLASS_STL_NAMESPACE::void_t;
 
 #if defined(__MUSACC_RTC__) || (!defined(_MSC_VER) && (__cplusplus < 201700L)) || (defined(_MSC_VER) && (_MSC_VER < 1600))
 

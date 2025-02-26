@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,10 +31,10 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mute/config.hpp>
-
-#include <mute/util/type_traits.hpp>
-#include <mute/numeric/numeric_types.hpp>        // sizeof_bits
+#include <mute/config.hpp>                     // MUTE_HOST_DEVICE
+#include <mute/numeric/numeric_types.hpp>      // mute::sizeof_bits
+#include <mute/numeric/integral_constant.hpp>  // Int<0>
+#include <mute/util/type_traits.hpp>           // mute::declval, mute::void_t, etc
 
 namespace mute
 {
@@ -117,6 +117,14 @@ raw_pointer_cast(T* ptr) {
   return ptr;
 }
 
+// The statically-known alignment of a dynamic pointer is unknown
+template <class T>
+MUTE_HOST_DEVICE constexpr
+Int<0>
+max_alignment(T*) {
+  return {};
+}
+
 //
 // A very simplified iterator adaptor.
 // Derived classed may override methods, but be careful to reproduce interfaces exactly.
@@ -170,6 +178,14 @@ auto
 raw_pointer_cast(iter_adaptor<I,D> const& x) {
   return raw_pointer_cast(x.ptr_);
 }
+
+template <class I, class D>
+MUTE_HOST_DEVICE constexpr
+auto
+max_alignment(iter_adaptor<I,D> const& x) {
+  return max_alignment(x.ptr_);
+}
+
 
 //
 // counting iterator -- quick and dirty

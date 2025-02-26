@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -69,8 +69,6 @@ template <
   class ElementAccumulator,
   class TileShape_MNK,
   class ClusterShape_MNK,
-  class AtomLayout,
-  class PermuteLayoutType,
   class StageCountType,
   class KernelScheduleType,
   class Enable = void
@@ -86,4 +84,5 @@ struct CollectiveBuilder {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "mutlass/gemm/collective/builders/mp22_gemm_builder.inl"
+#include "mutlass/gemm/collective/builders/mp31_sqmma_builder.inl"
 /////////////////////////////////////////////////////////////////////////////////////////////////

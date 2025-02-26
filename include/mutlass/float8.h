@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -37,9 +37,11 @@
 
 #pragma once
 
-#define MUSA_FP8_ENABLED 0
+#define MUSA_FP8_ENABLED 1
 
-#define MUSA_FP8_CVT_ENABLED 0
+#if defined(__MUSA_ARCH__) && (__MUSA_ARCH__ >= 310)
+#define MUSA_FP8_CVT_ENABLED 1
+#endif // defined(__MUSA_ARCH__)
 
 #ifdef __GNUC__
 // Ignore checks on reinterpret-casts that are being used for bitcasts.
@@ -134,7 +136,7 @@ struct alignas(1) float8_base {
 
     /// Ctors.
     MUTLASS_HOST_DEVICE
-    float8_base() : storage(0) { }
+    float8_base() = default;
 
     /// Is finite implementation
     MUTLASS_HOST_DEVICE
@@ -377,25 +379,47 @@ struct alignas(1) float_e4m3_t : float8_base<FloatEncoding::E4M3> {
     /// FP32 -> FP8 conversion - rounds to nearest even
     MUTLASS_HOST_DEVICE
     static float_e4m3_t from_float(float const& flt) {
+    #if defined(MUSA_FP8_CVT_ENABLED)
+        uint8_t tmp = __musa_f2e4m3_rn(flt);
+
+        return *reinterpret_cast<float_e4m3_t *>(&tmp);
+    #else
         return bitcast(Base::convert_float_to_fp8(flt));
+    #endif
     }
 
     /// FP16 -> E5M2 conversion - rounds to nearest even
     MUTLASS_HOST_DEVICE
     static float_e4m3_t from_half(half const& flt) {
+    #if defined(MUSA_FP8_CVT_ENABLED)
+        uint8_t tmp = __musa_f162e4m3_rn(flt);
+
+        return *reinterpret_cast<float_e4m3_t *>(&tmp);
+    #else
         return bitcast(Base::convert_float_to_fp8(__half2float(flt)));
+    #endif
     }
 
     // E4M3 -> half
     MUTLASS_HOST_DEVICE
     static half to_half(float_e4m3_t const& x) {
+    #if defined(MUSA_FP8_CVT_ENABLED)
+        uint8_t bits = x.storage;
+        return __musa_e4m32f16_rn(bits);
+    #else
         return __float2half(Base::convert_fp8_to_float(x.storage));
+    #endif
     }
 
     // E4M3 -> Float
     MUTLASS_HOST_DEVICE
     static float to_float(float_e4m3_t const& x) {
+    #if defined(MUSA_FP8_CVT_ENABLED)
+        uint8_t bits = x.storage;
+        return __half2float(__musa_e4m32f16_rn(bits));
+    #else
         return Base::convert_fp8_to_float(x.storage);
+    #endif
     }
 
     //
@@ -554,25 +578,47 @@ struct alignas(1) float_e5m2_t : float8_base<FloatEncoding::E5M2> {
     /// FP32 -> FP8 conversion - rounds to nearest even
     MUTLASS_HOST_DEVICE
     static float_e5m2_t from_float(float const& flt) {
+    #if defined(MUSA_FP8_CVT_ENABLED)
+        uint8_t tmp = __musa_f2e5m2_rn(flt);
+
+        return *reinterpret_cast<float_e5m2_t *>(&tmp);
+    #else
         return bitcast(Base::convert_float_to_fp8(flt));
+    #endif
     }
 
     /// FP16 -> E5M2 conversion - rounds to nearest even
     MUTLASS_HOST_DEVICE
     static float_e5m2_t from_half(half const& flt) {
+    #if defined(MUSA_FP8_CVT_ENABLED)
+        uint8_t tmp = __musa_f162e5m2_rn(flt);
+
+        return *reinterpret_cast<float_e5m2_t *>(&tmp);
+    #else
         return bitcast(Base::convert_float_to_fp8(__half2float(flt)));
+    #endif
     }
 
     // E5M2 -> half
     MUTLASS_HOST_DEVICE
     static half to_half(float_e5m2_t const& x) {
+    #if defined(MUSA_FP8_CVT_ENABLED)
+        uint8_t bits = x.storage;
+        return __musa_e5m22f16_rn(bits);
+    #else
         return __float2half(Base::convert_fp8_to_float(x.storage));
+    #endif
     }
 
     // E5M2 -> Float
     MUTLASS_HOST_DEVICE
     static float to_float(float_e5m2_t const& x) {
+    #if defined(MUSA_FP8_CVT_ENABLED)
+        uint8_t bits = x.storage;
+        return __half2float(__musa_e5m22f16_rn(bits));
+    #else
         return Base::convert_fp8_to_float(x.storage);
+    #endif
     }
 
     //

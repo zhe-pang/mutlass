@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -58,7 +58,7 @@ enum class ExecutionMode {
   kProfile,     ///< regular verification and profiling
   kDryRun,      ///< no kernels are launched or workspaces allocated; used to assess what operators might be launched
   kEnumerate,   ///< no kernels launched or workspaces allocated; lists all operation kind and operations
-  kTrace,       ///< exemutes a single device-side computation with no other kernel launches
+  kTrace,       ///< executes a single device-side computation with no other kernel launches
   kInvalid
 };
 

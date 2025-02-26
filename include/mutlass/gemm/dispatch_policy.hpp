@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -47,6 +47,14 @@ using namespace mute;
 // Policies for categorical dispatch of mainloop against kernel grid schedules
 //
 struct KernelMultistage { };
+struct KernelTme { };
+
+template <
+  int ScaleGranularityM = 0,
+  int ScaleGranularityN = 0,
+  int ScaleGranularityK = 0
+>
+struct KernelTmeGroupScaledAccum : KernelTme { };
 
 // Policies for dispatch of epilogue
 struct EpilogueDefault { };
@@ -72,6 +80,30 @@ struct MainloopMp22TwoStage {
   using ClusterShape = Shape<_1,_1,_1>;
 };
 
+// n-buffer in smem(TME), pipelined with SQMMA and TME, static schedule between TME and SQMMA
+template <
+  int Stages_,
+  class KernelSchedule = KernelTme>
+struct MainloopMp31TmeSqmma {
+  constexpr static int Stages = Stages_;
+  using ArchTag = arch::Mp31;
+  using Schedule = KernelSchedule;
+  using ClusterShape = Shape<_1,_1,_1>;
+};
+
+template <
+  int Stages_,
+  class KernelSchedule = KernelTme,
+  int ScaleGranularityM = 0, // `ScaleGranularityM` specifies scaling granularity along M, while zero-value `ScaleGranularityM` indicates that scaling granularity is `size<0>(TileShape_MNK{})` along M
+  int ScaleGranularityN = 0, // `ScaleGranularityN` specifies scaling granularity along N, while zero-value `ScaleGranularityN` indicates that scaling granularity is `size<1>(TileShape_MNK{})` along N
+  int ScaleGranularityK = 0
+>
+struct MainloopMp31TmeSqmmaBlockScalingFP8
+  : MainloopMp31TmeSqmma<Stages_, KernelSchedule> {
+  static_assert(
+    mute::is_same_v<KernelSchedule, KernelTmeGroupScaledAccum<ScaleGranularityM, ScaleGranularityN, ScaleGranularityK>>,
+    "Kernel Schedule must be the scaled accum policy.");
+};
 
 //////////////////////////////////////////////////////////////////////////////
 

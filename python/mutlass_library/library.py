@@ -1,6 +1,6 @@
 #################################################################################################
 #
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -37,6 +37,7 @@ Data types and tags used for emitting MUTLASS C++ kernels
 
 import enum
 import re
+import copy
 
 # The following block implements enum.auto() for Python 3.5 variants that don't include it such
 # as the default 3.5.2 on Ubuntu 16.04.
@@ -159,34 +160,41 @@ ShortLayoutTypeNames = {
 class KernelScheduleType(enum.Enum):
   ScheduleAuto = enum_auto()
   Multistage = enum_auto()
+  Tme = enum_auto()
 #
 KernelScheduleTag = {
   KernelScheduleType.ScheduleAuto: 'mutlass::gemm::collective::KernelScheduleAuto',
   KernelScheduleType.Multistage: 'mutlass::gemm::KernelMultistage',
+  KernelScheduleType.Tme: 'mutlass::gemm::KernelTme',
 }
 
 #
 KernelScheduleSuffixes = {
   KernelScheduleType.ScheduleAuto: '',
-  KernelScheduleType.Multistage: '_cpasync',
+  KernelScheduleType.Multistage: '_lsu',
+  KernelScheduleType.Tme: '_tme',
 }
 
 class EpilogueScheduleType(enum.Enum):
   ScheduleAuto = enum_auto()
   EpilogueTransposed = enum_auto()
-  NoSmemWarpSpecialized = enum_auto()
+  WithTme = enum_auto()
+  NoSmem = enum_auto()
+
 #
 EpilogueScheduleTag = {
   EpilogueScheduleType.ScheduleAuto: 'mutlass::epilogue::collective::EpilogueScheduleAuto',
   EpilogueScheduleType.EpilogueTransposed: 'mutlass::gemm::EpilogueTransposed',
-  EpilogueScheduleType.NoSmemWarpSpecialized: 'mutlass::epilogue::NoSmemWarpSpecialized',
+  EpilogueScheduleType.WithTme: 'mutlass::epilogue::WithTme',
+  EpilogueScheduleType.NoSmem: 'mutlass::epilogue::NoSmem'
 }
 
 #
 EpilogueScheduleSuffixes = {
   EpilogueScheduleType.ScheduleAuto: '',
   EpilogueScheduleType.EpilogueTransposed: '',
-  EpilogueScheduleType.NoSmemWarpSpecialized: '_epi_nosmem',
+  EpilogueScheduleType.WithTme: '_tme',
+  EpilogueScheduleType.NoSmem: '_epi_nosmem',
 }
 
 class TileSchedulerType(enum.Enum):
@@ -473,18 +481,15 @@ class MathInstruction:
 #
 class TileDescription:
 
-  def __init__(self, threadblock_shape, stages, math_instruction, min_compute, max_compute, atom_layout,
-                permute=[[Underscore()],[Underscore()],[Underscore()]], cluster_shape = [1,1,1]):
+  def __init__(self, threadblock_shape, stages, math_instruction, min_compute, max_compute, cluster_shape = [1,1,1]):
     self.threadblock_shape = threadblock_shape
     self.tile_shape = threadblock_shape
     self.stages = stages
     # self.warp_count = warp_count
-    self.math_instruction = math_instruction
+    self.math_instruction = copy.deepcopy(math_instruction)
     self.minimum_compute_capability = min_compute
     self.maximum_compute_capability = max_compute
     self.cluster_shape = cluster_shape
-    self.atom_layout = atom_layout
-    self.permute = permute
 
   def procedural_name(self):
     if self.minimum_compute_capability >= 90:

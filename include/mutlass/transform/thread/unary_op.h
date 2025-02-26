@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -52,7 +52,7 @@ class UnaryOp
 {
     public:
         MUTLASS_DEVICE
-        static FragmentOut exemute(FragmentIn &in)
+        static FragmentOut execute(FragmentIn &in)
         {
             static_assert(FragmentIn::kElements == FragmentOut::kElements, "Number of elements must match.");
             static_assert(platform::is_same<Transform, UnaryTransform::Identity>::value ||
@@ -82,7 +82,7 @@ class UnaryOp<FragmentIn, FragmentIn, Transform>
 {
     public:
         MUTLASS_DEVICE
-        static FragmentIn exemute(FragmentIn &in)
+        static FragmentIn execute(FragmentIn &in)
         {
             static_assert(platform::is_same<Transform, UnaryTransform::Identity>::value ||
                           platform::is_same<Transform, UnaryTransform::Conjugate>::value,

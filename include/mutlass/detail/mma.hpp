@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -42,6 +42,11 @@ namespace mutlass::detail {
 
 template <class TiledMma, class = void>
 struct IsSparseTensorOp : mute::false_type { };
+
+// TiledMma for sparse must have ValTypeE
+template <class TiledMma>
+struct IsSparseTensorOp<TiledMma, mute::void_t<typename TiledMma::ValTypeE>>
+    : mute::true_type { };
 
 // The following metafunction is used to extract the OperatorClass from a mutlass 3.x kernel.
 template <class TiledMma>

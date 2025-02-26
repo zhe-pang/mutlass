@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,10 +31,9 @@
  **************************************************************************************************/
 #pragma once
 
-#include <mutlass/complex.h>
-#include <mute/util/type_traits.hpp>
-#include <mute/numeric/numeric_types.hpp>
+#include <mute/config.hpp>    // MUTE_HOST_DEVICE
 
+#include <mutlass/complex.h>  // mutlass::complexm, mutlass::real, mutlass::imag, mutlass::is_complex
 namespace mute
 {
 

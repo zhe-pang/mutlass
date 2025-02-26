@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -44,6 +44,12 @@
 namespace mutlass::library {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+template<typename T, typename = void>
+struct has_scheduler : std::false_type {};
+
+template<typename T>
+struct has_scheduler<T, std::void_t<decltype(std::declval<T>().scheduler)>> : std::true_type {};
 
 template <typename Operator_>
 class GemmOperation3xBase : public Operation {
@@ -174,7 +180,7 @@ protected:
       OperatorArguments &operator_args, GemmUniversalConfiguration const *configuration) {
     // NOTE: GemmUniversalConfiguration does not contain problem shapes or batch strides
     // Do nothing here and construct kernel arguments in update_arguments_ instead
-    // We also cannot construct TMA descriptors without all the arguments available
+    // We also cannot construct TME descriptors without all the arguments available
 
     operator_args.mode = configuration->mode;
     return Status::kSuccess;
@@ -249,6 +255,26 @@ protected:
     /* Query device SM count to pass onto the kernel as an argument, where needed */
     operator_args.hw_info.sm_count = arguments->sm_count;
 
+
+    if constexpr (has_scheduler<decltype(operator_args)>::value) {
+      if constexpr (!std::is_const_v<decltype(operator_args.scheduler.swizzle_size)>) {
+        operator_args.scheduler.swizzle_size = arguments->swizzle_size;
+      }
+
+      if constexpr (!std::is_const_v<decltype(operator_args.scheduler.raster_order)>) {
+        using Enum_t = decltype(operator_args.scheduler.raster_order);
+        switch (arguments->raster_order) {
+          case RasterOrder::kAlongN:
+            operator_args.scheduler.raster_order = Enum_t::AlongN;
+            break;
+          case RasterOrder::kAlongM:
+            operator_args.scheduler.raster_order = Enum_t::AlongM;
+            break;
+          default:
+            operator_args.scheduler.raster_order = Enum_t::Heuristic;
+        }
+      }
+    }
     return status;
   }
 
@@ -264,10 +290,6 @@ public:
       static_cast<GemmUniversalArguments const *>(arguments_ptr);
 
     OperatorArguments args;
-    auto status = update_arguments_(args, arguments);
-    if (status != Status::kSuccess) {
-      return status;
-    }
 
     // can_implement rules may need access to problem shape
     args.problem_shape = mute::make_shape(
@@ -275,6 +297,11 @@ public:
       configuration->problem_size.n(),
       configuration->problem_size.k(),
       configuration->batch_count);
+    
+    auto status = update_arguments_(args, arguments);
+    if (status != Status::kSuccess) {
+      return status;
+    }
 
     return Operator::can_implement(args);
   }
@@ -323,7 +350,7 @@ public:
     }
 
     Operator *op = static_cast<Operator *>(host_workspace);
-    // We need to call initialize() since we have to rebuild TMA desc for every new set of args
+    // We need to call initialize() since we have to rebuild TME desc for every new set of args
     status = op->run(args, device_workspace, stream);
     return status;
   }

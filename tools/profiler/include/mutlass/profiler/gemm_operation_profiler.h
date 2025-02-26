@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -80,6 +80,9 @@ public:
 
     int split_k_slices;
     int batch_count;
+
+    mutlass::library::RasterOrder raster_order{mutlass::library::RasterOrder::kHeuristic};
+    int swizzle_size{1};
 
     // gemm with parallel interleaved reduction
     // gemm epilogue (alpha, beta) = (1.0, 0.0)

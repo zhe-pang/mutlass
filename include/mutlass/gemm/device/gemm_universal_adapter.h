@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -92,8 +92,10 @@ public:
   using TileShape = typename GemmKernel::TileShape;
   using ElementA = typename GemmKernel::ElementA;
   using ElementB = typename GemmKernel::ElementB;
-  using ElementC = typename GemmKernel::ElementC;
+  // using ElementC = typename GemmKernel::ElementC;
+  // using ElementC = mute::conditional_t<mute::is_void_v<GemmKernel::ElementC>, ElementD, GemmKernel::ElementC>;
   using ElementD = typename GemmKernel::ElementD;
+  using ElementC = mute::conditional_t<mute::is_void_v<typename GemmKernel::ElementC>, ElementD, typename GemmKernel::ElementC>;
   using ElementAccumulator = typename GemmKernel::ElementAccumulator;
   using DispatchPolicy = typename GemmKernel::DispatchPolicy;
   using CollectiveMainloop = typename GemmKernel::CollectiveMainloop;

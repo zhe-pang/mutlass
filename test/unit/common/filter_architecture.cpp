@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -107,11 +107,12 @@ void FilterArchitecture() {
     /// Minimum compute capability for the kernels in the named test
     int min_compute_capability;
 
-    /// Maximum compute capability for which the kernels are enabled 
+    /// Maximum compute capability for which the kernels are enabled
     int max_compute_capability;
   }
   test_filters[] = {
-    { "MP22*",                      22, kMaxDevice},
+    { "MP22*",                      22, 22},
+    { "MP31*",                      31, 31},
     {0, 0, false}
   };
 
@@ -135,7 +136,7 @@ int MutlassUnitTestProblemCount() {
     if(const char* problem_count = std::getenv("MUTLASS_UNIT_TEST_PROBLEM_COUNT")) {
 
         return std::stoi(problem_count);
-    } 
+    }
 
     return 0;
 }

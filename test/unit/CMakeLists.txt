@@ -1,4 +1,4 @@
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -40,8 +40,6 @@ target_link_libraries(
   MUTLASS
   mutlass_tools_util_includes
   GTest::gtest
-  # musart
-  # musa_driver
   )
 
 mutlass_add_library(
@@ -54,7 +52,6 @@ target_link_libraries(
   PUBLIC
   mutlass_test_unit_infra
   )
-
 
 set(MUTLASS_TEST_UNIT_RESULTS_CACHE_DIR ${CMAKE_CURRENT_LIST_DIR}/data/hashes)
 
@@ -86,6 +83,8 @@ function(mutlass_test_unit_add_executable NAME)
       PRIVATE
       mutlass_test_unit_infra
       mutlass_test_unit_infra_lib
+      musart
+      musa_driver
     )
   endif()
 

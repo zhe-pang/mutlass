@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -102,7 +102,11 @@ static char const* mutlassGetStatusString(mutlass::Status status) {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static const int NumThreadsPerWarp = 128;
+static const int NumThreadsPerWarpBeforeMP31 = 128;
+static const int NumThreadsPerWarp = 32;
+static const int NumThreadsPerWarpSquad = 128;
+static const int NumWarpsPerWarpSquad = NumThreadsPerWarpSquad / NumThreadsPerWarp;
+static const int NumThreadsPerHalfWarp = NumThreadsPerWarp / 2;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -119,10 +123,14 @@ MUTLASS_HOST_DEVICE bool thread0() {
 MUTLASS_DEVICE
 int canonical_lane_idx() {
   #if defined(__MUSA_ARCH__)
+  #if (__MUSA_ARCH__ >= 310)
     return threadIdx.x % NumThreadsPerWarp;
   #else
+    return threadIdx.x % NumThreadsPerWarpBeforeMP31;
+  #endif // #if (__MUSA_ARCH__ >= 310)
+  #else
     return 0;
-  #endif
+  #endif // #if defined(__MUSA_ARCH__)
 }
 
 /// Returns a warp index in the CTA. The threads in warp may not be convergent
@@ -130,10 +138,23 @@ int canonical_lane_idx() {
 MUTLASS_DEVICE
 int canonical_warp_idx() {
   #if defined(__MUSA_ARCH__)
+  #if (__MUSA_ARCH__ >= 310)
     return threadIdx.x / NumThreadsPerWarp;
   #else
+    return threadIdx.x / NumThreadsPerWarpBeforeMP31;
+  #endif // #if (__MUSA_ARCH__ >= 310)
+  #else
     return 0;
-  #endif
+  #endif // #if defined(__MUSA_ARCH__)
+}
+
+MUTLASS_DEVICE
+int canonical_warp_squad_idx() {
+  #if defined(__MUSA_ARCH__)
+    return threadIdx.x / NumThreadsPerWarpSquad;
+  #else
+    return 0;
+  #endif // #if defined(__MUSA_ARCH__)
 }
 
 

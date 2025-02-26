@@ -1,4 +1,4 @@
-# Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+# Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
 # Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: BSD-3-Clause
 #
@@ -52,6 +52,8 @@ function(mutlass_example_add_executable NAME)
     PRIVATE
     MUTLASS
     mutlass_tools_util_includes
+    musart
+    musa_driver
     )
 
   target_include_directories(
@@ -80,6 +82,8 @@ endfunction()
 foreach(EXAMPLE
   00_basic_gemm
   01_quyuan_gemm_with_collective_builder
+  02_mp31_gemm_with_collective_builder
+  03_mp31_fp8_scaling_gemm
   )
 
   add_subdirectory(${EXAMPLE})

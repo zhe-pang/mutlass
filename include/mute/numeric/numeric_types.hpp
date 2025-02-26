@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -31,12 +31,11 @@
  **************************************************************************************************/
 #pragma once
 
-#include <vector_types.h>
-#include <mutlass/numeric_types.h>
-#include <mutlass/numeric_size.h>
+#include <mute/config.hpp>          // MUTE_HOST_DEVICE
+#include <mute/numeric/int.hpp>     // mute::int2_t, mute::int4_t, etc
 
-#include <mute/numeric/int.hpp>
-#include <mute/numeric/real.hpp>
+#include <mutlass/numeric_size.h>   // mutlass::sizeof_bits
+#include <mutlass/numeric_types.h>  // mutlass::float_e4m3_t, mutlass::float_e5m2_t, etc
 
 namespace mute {
 
@@ -47,7 +46,7 @@ struct sizeof_bits : public mutlass::sizeof_bits<T> {};
 template <class T>
 static constexpr auto sizeof_bits_v = sizeof_bits<T>::value;
 
-using mutlass::bits_to_bytes;
+using mutlass::bytes_to_bits;
 
 using mutlass::is_subbyte;
 
@@ -73,4 +72,66 @@ using mutlass::int4b_t;
 using mutlass::uint4b_t;
 using mutlass::bin1_t;
 
-} // end namespace mute
+
+//
+// Print utility
+//
+
+MUTE_HOST_DEVICE
+void
+print(half_t a) {
+  printf("%f", static_cast<float>(a));
+}
+
+MUTE_HOST_DEVICE
+void
+print(bfloat16_t a) {
+  printf("%f", static_cast<float>(a));
+}
+
+
+MUTE_HOST_DEVICE
+void
+print(tfloat32_t a) {
+  printf("%f", static_cast<float>(a));
+}
+
+MUTE_HOST_DEVICE
+void
+print(float_e4m3_t a) {
+  printf("%f", static_cast<float>(a));
+}
+
+MUTE_HOST_DEVICE
+void
+print(float_e5m2_t a) {
+  printf("%f", static_cast<float>(a));
+}
+
+MUTE_HOST_DEVICE void
+pretty_print(bfloat16_t v) {
+  printf("%*.2f", 8, float(v));
+}
+
+MUTE_HOST_DEVICE void
+pretty_print(half_t v) {
+  printf("%*.2f", 8, float(v));
+}
+
+MUTE_HOST_DEVICE void
+pretty_print(tfloat32_t v) {
+  printf("%*.2e", 10, static_cast<float>(v));
+}
+
+MUTE_HOST_DEVICE void
+pretty_print(float_e4m3_t t) {
+  printf("%*.2f", 8, static_cast<float>(t));
+}
+
+MUTE_HOST_DEVICE void
+pretty_print(float_e5m2_t t) {
+  printf("%*.2f", 8, static_cast<float>(t));
+}
+
+} // namespace mute
+

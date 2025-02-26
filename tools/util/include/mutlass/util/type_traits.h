@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2024 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
+ * Copyright (c) 2024 - 2025 Moore Threads Technology Co., Ltd("Moore Threads"). All rights reserved.
  * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: BSD-3-Clause
  *
@@ -35,7 +35,7 @@
 
 #pragma once
 
-#include <cublas_v2.h>
+#include <mublas_v2.h>
 #include <musa_fp16.h>
 #include <stdint.h>
 
@@ -56,7 +56,7 @@ struct TypeTraits {
 
 template <>
 struct TypeTraits<int8_t> {
-  static musaDataType_t const cublas_type = MUSA_R_8I;
+  static musaDataType_t const mublas_type = MUSA_R_8I;
   typedef int8_t host_type;
   typedef int8_t device_type;
   typedef int8_t integer_type;
@@ -68,7 +68,7 @@ struct TypeTraits<int8_t> {
 
 template <>
 struct TypeTraits<uint8_t> {
-  static musaDataType_t const cublas_type = MUSA_R_8I;
+  static musaDataType_t const mublas_type = MUSA_R_8I;
   typedef uint8_t host_type;
   typedef uint8_t device_type;
   typedef uint8_t integer_type;
@@ -80,7 +80,7 @@ struct TypeTraits<uint8_t> {
 
 template <>
 struct TypeTraits<int> {
-  static musaDataType_t const cublas_type = MUSA_R_32I;
+  static musaDataType_t const mublas_type = MUSA_R_32I;
   typedef int host_type;
   typedef int device_type;
   typedef int32_t integer_type;
@@ -92,7 +92,7 @@ struct TypeTraits<int> {
 
 template <>
 struct TypeTraits<unsigned> {
-  static musaDataType_t const cublas_type = MUSA_R_32I;
+  static musaDataType_t const mublas_type = MUSA_R_32I;
   typedef unsigned host_type;
   typedef unsigned device_type;
   typedef uint32_t integer_type;
@@ -104,7 +104,7 @@ struct TypeTraits<unsigned> {
 
 template <>
 struct TypeTraits<int64_t> {
-  static musaDataType_t const cublas_type = MUSA_R_8I;
+  static musaDataType_t const mublas_type = MUSA_R_8I;
   typedef int64_t host_type;
   typedef int64_t device_type;
   typedef int64_t integer_type;
@@ -116,7 +116,7 @@ struct TypeTraits<int64_t> {
 
 template <>
 struct TypeTraits<uint64_t> {
-  static musaDataType_t const cublas_type = MUSA_R_8I;
+  static musaDataType_t const mublas_type = MUSA_R_8I;
   typedef uint64_t host_type;
   typedef uint64_t device_type;
   typedef uint64_t integer_type;
@@ -128,7 +128,7 @@ struct TypeTraits<uint64_t> {
 
 template <>
 struct TypeTraits<half_t> {
-  static musaDataType_t const cublas_type = MUSA_R_16F;
+  static musaDataType_t const mublas_type = MUSA_R_16F;
   typedef half_t host_type;
   typedef half_t device_type;
   typedef int16_t integer_type;
@@ -142,7 +142,7 @@ struct TypeTraits<half_t> {
 
 template <>
 struct TypeTraits<float> {
-  static musaDataType_t const cublas_type = MUSA_R_32F;
+  static musaDataType_t const mublas_type = MUSA_R_32F;
   typedef float host_type;
   typedef float device_type;
   typedef int32_t integer_type;
@@ -154,7 +154,7 @@ struct TypeTraits<float> {
 
 template <>
 struct TypeTraits<double> {
-  static musaDataType_t const cublas_type = MUSA_R_64F;
+  static musaDataType_t const mublas_type = MUSA_R_64F;
   typedef double host_type;
   typedef double device_type;
   typedef int64_t integer_type;
@@ -172,7 +172,7 @@ struct TypeTraits<double> {
 
 template <>
 struct TypeTraits<complex<half> > {
-  static musaDataType_t const cublas_type = MUSA_C_16F;
+  static musaDataType_t const mublas_type = MUSA_C_16F;
   typedef complex<half_t> host_type;
   typedef complex<half> device_type;
   typedef int16_t integer_type;
@@ -182,7 +182,7 @@ struct TypeTraits<complex<half> > {
 
 template <>
 struct TypeTraits<complex<half_t> > {
-  static musaDataType_t const cublas_type = MUSA_C_16F;
+  static musaDataType_t const mublas_type = MUSA_C_16F;
   typedef complex<half_t> host_type;
   typedef complex<half> device_type;
   typedef int16_t integer_type;
@@ -200,7 +200,7 @@ struct TypeTraits<complex<half_t> > {
 template <>
 struct TypeTraits<complex<float> > {
 
-  static musaDataType_t const cublas_type = MUSA_C_32F;
+  static musaDataType_t const mublas_type = MUSA_C_32F;
   typedef complex<float> host_type;
   typedef complex<float> device_type;
   typedef int64_t integer_type;
@@ -219,7 +219,7 @@ struct TypeTraits<complex<float> > {
 
 template <>
 struct TypeTraits<complex<double> > {
-  static musaDataType_t const cublas_type = MUSA_C_64F;
+  static musaDataType_t const mublas_type = MUSA_C_64F;
   typedef complex<double> host_type;
   typedef complex<double> device_type;
   struct integer_type { int64_t real, imag; };
