@@ -92,9 +92,11 @@ template <
   TME::SmemSwizzleGranularity sg,
   TME::SmemSwizzleStride      ss,
   TME::SmemSwizzleLine        sl,
+  TME::CacheHint      inner_hint,
+  TME::CacheHint      outer_hint,
   PrefetchSize          prefetch
 >
-struct MP31_TME_LOAD_OP : MP31_TME_LOAD_ENTRY<sg, ss, sl, prefetch> {};
+struct MP31_TME_LOAD_OP : MP31_TME_LOAD_ENTRY<sg, ss, sl, inner_hint, outer_hint, prefetch> {};
 
 
 // The non-executable MP31_TME_LOAD_ENTRY with tme_desc and no tme_bar
@@ -105,9 +107,11 @@ template <
   TME::SmemSwizzleGranularity sg,
   TME::SmemSwizzleStride      ss,
   TME::SmemSwizzleLine        sl,
+  TME::CacheHint      inner_hint,
+  TME::CacheHint      outer_hint,
   PrefetchSize          prefetch
 >
-struct Copy_Traits<MP31_TME_LOAD_ENTRY<sg, ss, sl, prefetch>, NumBitsPerTME, AuxParams_>
+struct Copy_Traits<MP31_TME_LOAD_ENTRY<sg, ss, sl, inner_hint, outer_hint, prefetch>, NumBitsPerTME, AuxParams_>
 {
   using ThrID    = Layout<_1>;
   // Map from (src-thr,src-val) to bit
@@ -131,7 +135,7 @@ struct Copy_Traits<MP31_TME_LOAD_ENTRY<sg, ss, sl, prefetch>, NumBitsPerTME, Aux
 
   // Construct an executable MP31_TME_LOAD with tme_bar
   MUTE_HOST_DEVICE constexpr
-  Copy_Traits<MP31_TME_LOAD_OP<sg, ss, sl, prefetch>, NumBitsPerTME, AuxParams>
+  Copy_Traits<MP31_TME_LOAD_OP<sg, ss, sl, inner_hint, outer_hint, prefetch>, NumBitsPerTME, AuxParams>
   with(uint32_t tme_bar) const {
     return {{}, {&tme_desc_, tme_bar, aux_params_}};
   }
@@ -145,7 +149,7 @@ struct Copy_Traits<MP31_TME_LOAD_ENTRY<sg, ss, sl, prefetch>, NumBitsPerTME, Aux
     return make_counting_tensor(make_layout(g_shape, aux_params_.g_stride_));
   }
 
-  // Don't try to execute a copy with SM90_TME_LOAD before calling .with()
+  // Don't try to execute a copy with MP31_TME_LOAD before calling .with()
   template <class TS, class SLayout,
             class TD, class DLayout>
   MUTE_HOST_DEVICE friend constexpr void
@@ -161,10 +165,12 @@ template <
   TME::SmemSwizzleGranularity sg,
   TME::SmemSwizzleStride      ss,
   TME::SmemSwizzleLine        sl,
+  TME::CacheHint      inner_hint,
+  TME::CacheHint      outer_hint,
   PrefetchSize          prefetch
 >
-struct Copy_Traits<MP31_TME_LOAD_OP<sg, ss, sl, prefetch>, NumBitsPerTME, AuxParams>
-     : TME_LOAD_Unpack<MP31_TME_LOAD_OP<sg, ss, sl, prefetch>>
+struct Copy_Traits<MP31_TME_LOAD_OP<sg, ss, sl, inner_hint, outer_hint, prefetch>, NumBitsPerTME, AuxParams>
+     : TME_LOAD_Unpack<MP31_TME_LOAD_OP<sg, ss, sl, inner_hint, outer_hint, prefetch>>
 {
   using ThrID    = Layout<_1>;
   // Map from (src-thr,src-val) to bit
@@ -180,6 +186,46 @@ struct Copy_Traits<MP31_TME_LOAD_OP<sg, ss, sl, prefetch>, NumBitsPerTME, AuxPar
     uint32_t const&,
     AuxParams const&
   > const opargs_;
+};
+
+template <
+  class NumBitsPerTME,
+  class AuxParams
+>
+struct Copy_Traits<MP31_TME_PREFETCH, NumBitsPerTME, AuxParams>
+{
+  using ThrID    = Layout<_1>;
+  // Map from (src-thr,src-val) to bit
+  using SrcLayout = Layout<Shape<_1,NumBitsPerTME>>;
+  // Map from (dst-thr,dst-val) to bit
+  using DstLayout = Layout<Shape<_1,NumBitsPerTME>>;
+  // Reference map from (thr,val) to bit
+  using RefLayout = SrcLayout;
+
+  tuple<TmeDescriptor const*, AuxParams const&> const opargs_;
+
+  template <class... CopyArgs>
+  MUTE_HOST_DEVICE constexpr
+  Copy_Traits(Copy_Traits<CopyArgs...> const& traits)
+    : opargs_({&traits.tme_desc_, traits.aux_params_}) {}
+
+
+  template <class TS, class SLayout,
+            class TD, class DLayout>
+  MUTE_HOST_DEVICE friend constexpr void
+  copy_unpack(Copy_Traits                  const& traits,
+              Tensor<TS,SLayout>           const& src,
+              Tensor<TD,DLayout>                & dst)
+  {
+    auto src_coord = src.data().coord_;
+    auto aux_params = get<1>(traits.opargs_);
+    auto block_dim = mute::flatten(aux_params.block_dim_);
+
+    return detail::explode_tuple(detail::CallCOPY<MP31_TME_PREFETCH>{},
+                                 traits.opargs_, make_seq<1>{},
+                                 src_coord, tuple_seq<decltype(src_coord)>{},
+                                 block_dim, tuple_seq<decltype(block_dim)>{});
+  }
 };
 
 //////////////////////////////////////////////////////////////////////////////
@@ -539,6 +585,8 @@ fill_tme_gmem_shape_stride(Tensor<GEngine,GLayout>   const& gtensor,           /
 
 template <class TmeInternalType,
           class CopyOp,
+          TME::CacheHint InnerHint,
+          TME::CacheHint OuterHint,
           class GEngine, class GLayout,
           class TShape,  class TStride,
           int B, int M, int S>
@@ -613,7 +661,7 @@ make_tme_copy_desc(Tensor<GEngine,GLayout> const& gtensor,         // The origin
               << "\noobFill         " << tme_oobFill << std::endl;
     std::cerr << "Error: Failed to initialize the TME descriptor: "
               << result << std::endl;
-    //assert(false);
+    assert(false);
   }
 
   //
@@ -661,7 +709,7 @@ make_tme_copy_desc(Tensor<GEngine,GLayout> const& gtensor,         // The origin
   static_assert(is_same_v<CopyOp, MP31_TME_LOAD> || is_same_v<CopyOp, MP31_TME_STORE>, "Unsupported CopyOp");
 
   using CopyOpEntry = mute::conditional_t<is_same_v<CopyOp, MP31_TME_LOAD>,
-                                          MP31_TME_LOAD_ENTRY<tme_SwizzleGranularity, tme_SwizzleStride, tme_SwizzleLine, tme_l2Prefetch>,
+                                          MP31_TME_LOAD_ENTRY<tme_SwizzleGranularity, tme_SwizzleStride, tme_SwizzleLine, InnerHint, OuterHint, tme_l2Prefetch>,
                                           MP31_TME_STORE_ENTRY<tme_SwizzleGranularity, tme_SwizzleStride, tme_SwizzleLine>>;
 
   auto block_dim = product_each(take<0, tme_dim>(tme_gbasis).shape());
@@ -685,6 +733,8 @@ make_tme_copy_desc(Tensor<GEngine,GLayout> const& gtensor,         // The origin
 }
 
 template <class TmeInternalType,
+          TME::CacheHint InnerHint,
+          TME::CacheHint OuterHint,
           class CopyOp,
           class GEngine, class GLayout,
           class SLayout,
@@ -705,7 +755,7 @@ make_tme_copy_atom(CopyOp,
 
   auto tme_gbasis = detail::construct_tme_gbasis<TmeInternalType>(gtensor, smem_layout, cta_v_map);
 
-  auto [tme_desc, aux_params, copy_op] = detail::make_tme_copy_desc<TmeInternalType, CopyOp>(
+  auto [tme_desc, aux_params, copy_op] = detail::make_tme_copy_desc<TmeInternalType, CopyOp, InnerHint, OuterHint>(
                                                                                      gtensor,
                                                                                      tme_gbasis,
                                                                                      smem_swizzle);
@@ -732,6 +782,8 @@ make_tme_copy_atom(CopyOp,
 }
 
 template <class TmeInternalType,
+          TME::CacheHint InnerHint,
+          TME::CacheHint OuterHint,
           class CopyOp,
           class GEngine, class GLayout,
           class SLayout,
@@ -743,7 +795,7 @@ make_tme_copy_tiled(CopyOp                   const& copy_op,
                     SLayout                  const& slayout,    // CTA Tile of SMEM
                     Layout<VShape, VStride>  const& cta_v_map)
 {
-  Copy_Atom atom = make_tme_copy_atom<TmeInternalType>(copy_op, gtensor, slayout, cta_v_map);
+  Copy_Atom atom = make_tme_copy_atom<TmeInternalType, InnerHint, OuterHint>(copy_op, gtensor, slayout, cta_v_map);
 
   //
   // Construct the TiledCopy
@@ -781,7 +833,9 @@ make_tme_copy_tiled(CopyOp                   const& copy_op,
 } // namespace detail
 
 
-template <class TmeInternalType = void,
+template <TME::CacheHint InnerHint = TME::CacheHint::CACHE_NORMAL,
+          TME::CacheHint OuterHint = TME::CacheHint::CACHE_NORMAL,
+          class TmeInternalType = void,
           class CopyOp,
           class GEngine, class GLayout,
           class SLayout,
@@ -796,13 +850,15 @@ make_tme_copy(CopyOp                   const& copy_op,
   auto cta_v_tile = make_identity_layout(shape(gtensor)).compose(cta_tiler);
 
   using TmeType = conditional_t<is_same<void, TmeInternalType>::value, typename GEngine::value_type, TmeInternalType>;
-  return detail::make_tme_copy_tiled<TmeType>(copy_op,
+  return detail::make_tme_copy_tiled<TmeType, InnerHint, OuterHint>(copy_op,
                                               gtensor, slayout,
                                               cta_v_tile);
 }
 
 // Explicit defaulting
-template <class CopyOp,
+template <TME::CacheHint InnerHint = TME::CacheHint::CACHE_NORMAL,
+          TME::CacheHint OuterHint = TME::CacheHint::CACHE_NORMAL,
+          class CopyOp,
           class GEngine, class GLayout,
           class SLayout>
 MUTE_HOST_RTC
@@ -811,7 +867,7 @@ make_tme_copy(CopyOp                  const& copy_op,
               Tensor<GEngine,GLayout> const& gtensor,
               SLayout                 const& slayout)
 {
-  return make_tme_copy(copy_op, gtensor, slayout, product_each(shape(slayout)));
+  return make_tme_copy<InnerHint, OuterHint>(copy_op, gtensor, slayout, product_each(shape(slayout)));
 }
 
 //////////////////////////////////////////////////
@@ -819,7 +875,9 @@ make_tme_copy(CopyOp                  const& copy_op,
 //////////////////////////////////////////////////
 
 
-template <class TmeInternalType = void,
+template <TME::CacheHint InnerHint = TME::CacheHint::CACHE_NORMAL,
+          TME::CacheHint OuterHint = TME::CacheHint::CACHE_NORMAL,
+          class TmeInternalType = void,
           class CopyOp,
           class GEngine, class GLayout,
           class SLayout,
@@ -834,7 +892,7 @@ make_tme_atom(CopyOp                   const& copy_op,
   auto cta_v_tile = make_identity_layout(shape(gtensor)).compose(cta_tiler);
 
   using TmeType = conditional_t<is_same<void, TmeInternalType>::value, typename GEngine::value_type, TmeInternalType>;
-  return detail::make_tme_copy_atom<TmeType>(copy_op,
+  return detail::make_tme_copy_atom<TmeType, InnerHint, OuterHint>(copy_op,
                                              gtensor, slayout,
                                              cta_v_tile);
 }

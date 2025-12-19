@@ -82,7 +82,7 @@ endfunction()
 foreach(EXAMPLE
   00_basic_gemm
   01_quyuan_gemm_with_collective_builder
-  02_mp31_gemm_with_collective_builder
+  02_mp31_fp8_gemm_with_collective_builder
   03_mp31_fp8_scaling_gemm
   )
 

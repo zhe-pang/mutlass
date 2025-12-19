@@ -186,6 +186,145 @@ struct TileSchedulerDefaultParams {
   }
 };
 
+struct TileSchedulerPersistParams {
+
+  enum class RasterOrder {
+    AlongM,
+    AlongN
+  };
+
+  enum class RasterOrderOptions {
+    Heuristic,
+    AlongM,
+    AlongN
+  };
+
+
+  FastDivmod divmod_macro_tile_x_;
+  FastDivmod divmod_macro_tile_size_;
+  int32_t swizzle_size_ = 0;
+  RasterOrder raster_order_ = RasterOrder::AlongN;
+  dim3 problem_blocks_{0, 0, 0};
+
+  // Initializes members. This variant of the method should only be used when
+  // problem_shape and tile_shape contain modes of only rank 1.
+  void
+  initialize(
+    BatchedGemmCoord problem_shape,
+    GemmCoord tile_shape,
+    KernelHardwareInfo const& hw_info,
+    int swizzle_size,
+    RasterOrderOptions raster_order_option
+  ) {
+    dim3 problem_blocks = get_tiled_cta_shape_mnl(problem_shape, tile_shape);
+    return initialize(
+      problem_blocks,
+      hw_info,
+      swizzle_size,
+      raster_order_option
+    );
+  }
+
+  // Version of initialize that takes in as input the number of CTAs in the M and N and L dimensions.
+  // This is useful for calculating the tiled shape when a mode of problem and/or CTA shape has rank > 1,
+  // for which using MuTe algebra for calculating tile shapes is easiest.
+  void
+  initialize(
+    dim3 problem_blocks,
+    KernelHardwareInfo const& hw_info,
+    int swizzle_size,
+    RasterOrderOptions raster_order_option
+  ) {
+    MUTLASS_UNUSED(hw_info);
+    RasterOrder raster_order = get_rasterization_order(
+      problem_blocks.y,
+      problem_blocks.x,
+      raster_order_option
+    );
+
+    swizzle_size_ = swizzle_size;
+    raster_order_ = raster_order;
+    problem_blocks_ = problem_blocks;
+    if (raster_order_ == RasterOrder::AlongN) {
+      divmod_macro_tile_size_ = FastDivmod(swizzle_size_ * problem_blocks.x);
+    } else {
+      divmod_macro_tile_size_ = FastDivmod(swizzle_size_ * problem_blocks.y);
+    }
+    divmod_macro_tile_x_ = FastDivmod(swizzle_size_);
+  }
+
+  // Version of get_grid_shape that takes in as input the number of CTAs in the M and N and L dimensions.
+  // This is useful for calculating the tiled shape when a mode of problem and/or CTA shape has rank > 1,
+  // for which using MuTe algebra for calculating tile shapes is easiest.
+  MUTLASS_HOST_DEVICE static
+  dim3
+  get_grid_shape(
+    dim3 problem_blocks,
+    KernelHardwareInfo const& hw_info,
+    int swizzle_size,
+    RasterOrderOptions raster_order_option
+  ) {
+
+    //MUTLASS_UNUSED(hw_info);
+    RasterOrder raster_order = get_rasterization_order(
+      problem_blocks.x,
+      problem_blocks.y,
+      raster_order_option
+    );
+    uint32_t block_num_xy = problem_blocks.x * problem_blocks.y;
+    block_num_xy = min(block_num_xy, (uint32_t)hw_info.query_device_multiprocessor_count(hw_info.device_id));
+    return dim3(block_num_xy, 1, problem_blocks.z);
+  }
+
+  MUTLASS_HOST_DEVICE
+  static RasterOrder
+  get_rasterization_order(
+    uint32_t tiles_m,
+    uint32_t tiles_n,
+    RasterOrderOptions raster_order_option
+  ) {
+
+    if (raster_order_option == RasterOrderOptions::Heuristic) {
+      if (tiles_n > tiles_m) {
+        return RasterOrder::AlongM;
+      }
+      else {
+        return RasterOrder::AlongN;
+      }
+    }
+    else if (raster_order_option == RasterOrderOptions::AlongN) {
+        return RasterOrder::AlongN;
+    }
+    else {
+      return RasterOrder::AlongM;
+    }
+  }
+
+  // Get the number of CTA tiles in this problem. This variant of the method should only be used when
+  // problem_shape and tile_shape contain modes of only rank 1.
+  MUTLASS_HOST_DEVICE
+  static dim3
+  get_tiled_cta_shape_mnl(BatchedGemmCoord problem_shape, GemmCoord cta_shape) {
+    auto cta_m = (problem_shape.m() + cta_shape.m() - 1) / cta_shape.m();
+    auto cta_n = (problem_shape.n() + cta_shape.n() - 1) / cta_shape.n();
+
+    return get_tiled_cta_shape_mnl(problem_shape, cta_m, cta_n);
+  }
+
+  // Version of get_tiled_cta_shape_mnl that takes in as input the number of CTAs in the M and N dimensions.
+  // This is useful for calculating the tiled shape when a mode of problem and/or CTA shape has rank > 1,
+  // for which using MuTe algebra for calculating tile shapes is easiest.
+  MUTLASS_HOST_DEVICE
+  static dim3
+  get_tiled_cta_shape_mnl(BatchedGemmCoord problem_shape, uint32_t cta_m, uint32_t cta_n) {
+    return {
+      static_cast<uint32_t>(cta_m),
+      static_cast<uint32_t>(cta_n),
+      static_cast<uint32_t>(problem_shape.batch())
+    };
+  }
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 } // namespace mutlass::gemm::kernel::detail
 

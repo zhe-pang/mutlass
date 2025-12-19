@@ -39,7 +39,7 @@ sqmma_ss_tag_to_major_B() {
   }
 }
 
-template <mute::TCE::Major major, class ElementType, class SqmmaOp>
+template <mute::TCE::Major major, class ElementType, class SqmmaOp, class TileShape>
 MUTE_HOST_DEVICE constexpr
 auto
 ss_smem_selector_A()
@@ -50,10 +50,18 @@ ss_smem_selector_A()
   using AtomM = decltype(get<0>(AtomOpShape{}));
   using AtomK = decltype(get<2>(AtomOpShape{}));
 
-  return mute::MP31::SQMMA::make_canonical_gemm_smem_atom_layout<ElementType, major, AtomM, AtomK>();
+  if constexpr (major == mute::TCE::Major::MN) {
+    return mute::MP31::SQMMA::make_canonical_gemm_smem_atom_layout<ElementType, major, AtomM, mute::tuple_element_t<2, TileShape>>();
+  } else {
+    constexpr int MaxAtomK = 256 / bits_to_bytes(sizeof_bits_v<ElementType>);
+
+    using SmemAtomK = mute::conditional_t<bits_to_bytes(mute::get<2>(TileShape{}) * sizeof_bits_v<ElementType>) % 256 == 0,
+                                          Int<min(MaxAtomK, mute::tuple_element_t<2, TileShape>{})>, AtomK>;
+    return mute::MP31::SQMMA::make_canonical_gemm_smem_atom_layout<ElementType, major, mute::tuple_element_t<0, TileShape>, SmemAtomK>();
+  }
 }
 
-template <mute::TCE::Major major, class ElementType, class SqmmaOp>
+template <mute::TCE::Major major, class ElementType, class SqmmaOp, class TileShape>
 MUTE_HOST_DEVICE constexpr
 auto
 ss_smem_selector_B()
@@ -64,7 +72,14 @@ ss_smem_selector_B()
   using AtomN = decltype(get<1>(AtomOpShape{}));
   using AtomK = decltype(get<2>(AtomOpShape{}));
 
-  return mute::MP31::SQMMA::make_canonical_gemm_smem_atom_layout<ElementType, major, AtomN, AtomK>();
+  if constexpr (major == mute::TCE::Major::MN) {
+    return mute::MP31::SQMMA::make_canonical_gemm_smem_atom_layout<ElementType, major, AtomN, mute::tuple_element_t<2, TileShape>>();
+  } else {
+    constexpr int MaxAtomK = 256 / bits_to_bytes(sizeof_bits_v<ElementType>);
+    using SmemAtomK = mute::conditional_t<bits_to_bytes(mute::get<2>(TileShape{}) * sizeof_bits_v<ElementType>) % 256 == 0,
+                                          Int<min(MaxAtomK, mute::tuple_element_t<2, TileShape>{})>, AtomK>;
+    return mute::MP31::SQMMA::make_canonical_gemm_smem_atom_layout<ElementType, major, mute::tuple_element_t<1, TileShape>, SmemAtomK>();
+  }
 }
 
 template <class ElementA, int AlignmentA, class ElementB, int AlignmentB, int RequiredAlignment>

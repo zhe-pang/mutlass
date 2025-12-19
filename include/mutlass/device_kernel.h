@@ -35,25 +35,27 @@
 
 #pragma once
 
+#include "mutlass/detail/helper_macros.hpp"
+
 #define MUTLASS_GRID_CONSTANT
 
 ////////////////////////////////////////////////////////////////////////////////
 
 namespace mutlass {
 
-template <typename T> 
-struct Type2Type  
-{  
-  using type=T;                    
+template <typename T>
+struct Type2Type
+{
+  using type=T;
 };
 // using the simple type to replace the complex type to reduce this symbol size
-template <typename  T>  
+template <typename  T>
 struct GetUnderlyingKernel: public Type2Type<T>
 {};
-template <uint64_t shader_guid, unsigned index, template <uint64_t, unsigned> class Wrapper > 
-struct GetUnderlyingKernel<Wrapper<shader_guid,index>>: public Wrapper<shader_guid,index> 
+template <uint64_t shader_guid, unsigned index, template <uint64_t, unsigned> class Wrapper >
+struct GetUnderlyingKernel<Wrapper<shader_guid,index>>: public Wrapper<shader_guid,index>
 {};
-template <typename  T>  
+template <typename  T>
 using GetUnderlyingKernel_t = typename GetUnderlyingKernel<T>::type;
 
 

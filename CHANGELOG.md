@@ -1,6 +1,19 @@
 # MooreThreads MUTLASS Changelog
 
-## [0.2.0](https://github.com/MooreThreads/mutlass/tags/v0.2.0) (2025-02-26)
+## [0.3.0](https://github.com/MooreThreads/mutlass/releases/tag/v0.3.0) (2025-12-19)
+
+- New Features:
+  - Tensor Memory Engine (TME) im2col primitives.
+  - New warp specialized GEMM mainloop targeting MP31 architecture.
+  - New instances of FP8 (e4m3, m5m2) GEMM in Library targeting MP31 architecture.
+  - New persistent tile schedule.
+  - New Warp specialized [FMHA](./experimental/fmha/fmha_fwd.mu) and [Paged FMHA](./experimental/fmha/paged_fmha_fwd.mu) implementation for MP31 architecture.
+  - New Warp specialized [MLA](./experimental/fmha/mla.mu) implementation for MP31 architecture.
+- Bug fixing and improvements
+  - Refine FP8 scale GEMM implementation for MP31 architecture.
+
+
+## [0.2.0](https://github.com/MooreThreads/mutlass/releases/tag/v0.2.0) (2025-02-26)
 
 - MP31 Features:
   - Squad-level MMA(SQMMA) and Warp-level MMA primitives with rich data types (TF32/FP16/BF16/[FP8](./examples/02_mp31_fp8_gemm_with_collective_builder)/S8 etc.).
@@ -13,7 +26,7 @@
 - Upgrade the backend from CUTLASS/CuTe 3.5.0 to CUTLASS/CuTe 3.6.0.
 
 
-## [0.1.1](https://github.com/MooreThreads/mutlass/tags/v0.1.1) (2024-09-30)
+## [0.1.1](https://github.com/MooreThreads/mutlass/releases/tag/v0.1.1) (2024-09-30)
 
 - [MuTe](./include/mute), a core library and backend adapted from CUTLASS CuTe
 - Quyuan Features

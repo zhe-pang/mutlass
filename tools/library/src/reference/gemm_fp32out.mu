@@ -102,6 +102,22 @@ void initialize_gemm_reference_operations_fp32out(Manifest &manifest) {
     float,
     float
   >(manifest);
+
+  make_gemm_real_canonical_layouts<
+    float_e4m3_t,
+    float_e4m3_t,
+    float,
+    float,
+    float
+  >(manifest);
+
+  make_gemm_real_canonical_layouts<
+    float_e5m2_t,
+    float_e5m2_t,
+    float,
+    float,
+    float
+  >(manifest);
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

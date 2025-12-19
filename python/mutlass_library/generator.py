@@ -504,6 +504,7 @@ def GenerateMP31_TensorOp_gemm_tf32(manifest, musa_version):
 
   schedules_default = [
     [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+    [KernelScheduleType.TmeWarpSpecialized, EpilogueScheduleType.NoSmem],
   ]
 
   aligns = [
@@ -535,7 +536,10 @@ def GenerateMP31_TensorOp_gemm_tf32(manifest, musa_version):
             min(128, tile_description.threadblock_shape[1]),
             min(32, tile_description.threadblock_shape[2]),
           ]
-        CreateGemmUniversal3xOperator(manifest, [layout], [tile_description], data_types, schedules_default)
+          for schedule in schedules_default:
+            if schedule[0] == KernelScheduleType.TmeWarpSpecialized and tile_description.threadblock_shape[0] > 256:
+              continue
+            CreateGemmUniversal3xOperator(manifest, [layout], [tile_description], data_types, [schedule])
       else:
         for tile_description in not_all_k_major_tile_descriptions:
           tile_description.math_instruction.instruction_shape = [
@@ -586,6 +590,7 @@ def GenerateMP31_TensorOp_gemm_f16(manifest, musa_version):
 
   schedules_default = [
     [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+    [KernelScheduleType.TmeWarpSpecialized, EpilogueScheduleType.NoSmem],
   ]
 
   aligns = [
@@ -608,8 +613,12 @@ def GenerateMP31_TensorOp_gemm_f16(manifest, musa_version):
       [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
       [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
     ]
-
-    CreateGemmUniversal3xOperator(manifest, layouts, tile_descriptions, data_types, schedules_default)
+    
+    for schedule in schedules_default:
+        for tile_description in tile_descriptions:
+          if schedule[0] == KernelScheduleType.TmeWarpSpecialized and tile_description.threadblock_shape[0] > 256:
+            continue
+          CreateGemmUniversal3xOperator(manifest, layouts, [tile_description], data_types, [schedule])
 
 def GenerateMP31_TensorOp_gemm_bf16(manifest, musa_version):
   math_inst = MathInstruction(
@@ -652,10 +661,148 @@ def GenerateMP31_TensorOp_gemm_bf16(manifest, musa_version):
 
   schedules_default = [
     [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+    [KernelScheduleType.TmeWarpSpecialized, EpilogueScheduleType.NoSmem],
   ]
 
   aligns = [
     [2, 2, 2],
+  ]
+
+  data_types = []
+  for cd_type in cd_types:
+    data_type_ = data_type.copy()
+    data_type_["c_type"] = cd_type[0]
+    data_type_["d_type"] = cd_type[1]
+    data_types.append(data_type_)
+  for align_a, align_b, align_c in aligns:
+    layouts = [
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+    ]
+
+    for schedule in schedules_default:
+        for tile_description in tile_descriptions:
+          if schedule[0] == KernelScheduleType.TmeWarpSpecialized and tile_description.threadblock_shape[0] > 256:
+            continue
+          CreateGemmUniversal3xOperator(manifest, layouts, [tile_description], data_types, [schedule])
+
+
+def GenerateMP31_TensorOp_gemm_e4m3(manifest, musa_version):
+  math_inst = MathInstruction(
+                [0, 0, 0],
+                DataType.e4m3, DataType.e4m3, DataType.f32,
+                OpcodeClass.TensorOp)
+
+  min_cc = 31
+  max_cc = 31
+
+  tile_descriptions = [
+    TileDescription([256, 128, 64], 4, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 64], 3, math_inst, min_cc, max_cc),
+    TileDescription([128, 256, 128], 4, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 64], 4, math_inst, min_cc, max_cc),
+    TileDescription([64, 128, 64], 4, math_inst, min_cc, max_cc),
+  ]
+
+  for tile_description in tile_descriptions:
+    tile_description.math_instruction.instruction_shape = [
+      min(128, tile_description.threadblock_shape[0]),
+      min(128, tile_description.threadblock_shape[1]),
+      min(64, tile_description.threadblock_shape[2]),
+    ]
+
+  cd_types = [
+    (math_inst.element_accumulator, math_inst.element_accumulator),
+    (DataType.void, math_inst.element_accumulator),
+  ]
+  data_type = {
+    "a_type"   : math_inst.element_a,
+    "b_type"   : math_inst.element_b,
+    "c_type"   : math_inst.element_accumulator,
+    "d_type"   : math_inst.element_accumulator,
+    "acc_type" : math_inst.element_accumulator,
+    "epi_type" : math_inst.element_accumulator
+  }
+
+  schedules_default = [
+    [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+    [KernelScheduleType.TmeWarpSpecialized, EpilogueScheduleType.NoSmem],
+  ]
+
+  aligns = [
+    [4, 4, 4],
+  ]
+
+  data_types = []
+  for cd_type in cd_types:
+    data_type_ = data_type.copy()
+    data_type_["c_type"] = cd_type[0]
+    data_type_["d_type"] = cd_type[1]
+    data_types.append(data_type_)
+  for align_a, align_b, align_c in aligns:
+    layouts = [
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.ColumnMajor, align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.RowMajor,    align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.ColumnMajor, align_b], [LayoutType.RowMajor,    align_c]],
+      [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
+    ]
+
+    CreateGemmUniversal3xOperator(manifest, layouts, tile_descriptions, data_types, schedules_default)
+  
+def GenerateMP31_TensorOp_gemm_e5m2(manifest, musa_version):
+  math_inst = MathInstruction(
+                [0, 0, 0],
+                DataType.e5m2, DataType.e5m2, DataType.f32,
+                OpcodeClass.TensorOp)
+
+  min_cc = 31
+  max_cc = 31
+
+  tile_descriptions = [
+    TileDescription([256, 128, 64], 4, math_inst, min_cc, max_cc),
+    TileDescription([256, 256, 64], 3, math_inst, min_cc, max_cc),
+    TileDescription([128, 256, 128], 4, math_inst, min_cc, max_cc),
+    TileDescription([128, 128, 64], 4, math_inst, min_cc, max_cc),
+    TileDescription([128, 64, 64], 4, math_inst, min_cc, max_cc),
+  ]
+
+  for tile_description in tile_descriptions:
+    tile_description.math_instruction.instruction_shape = [
+      min(128, tile_description.threadblock_shape[0]),
+      min(128, tile_description.threadblock_shape[1]),
+      min(64, tile_description.threadblock_shape[2]),
+    ]
+
+  cd_types = [
+    (math_inst.element_accumulator, math_inst.element_accumulator),
+    (DataType.void, math_inst.element_accumulator),
+  ]
+  data_type = {
+    "a_type"   : math_inst.element_a,
+    "b_type"   : math_inst.element_b,
+    "c_type"   : math_inst.element_accumulator,
+    "d_type"   : math_inst.element_accumulator,
+    "acc_type" : math_inst.element_accumulator,
+    "epi_type" : math_inst.element_accumulator
+  }
+
+  schedules_default = [
+    [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+    [KernelScheduleType.TmeWarpSpecialized, EpilogueScheduleType.NoSmem],
+  ]
+
+  aligns = [
+    [4, 4, 4],
   ]
 
   data_types = []
@@ -717,6 +864,7 @@ def GenerateMP31_TensorOp_gemm_s8(manifest, musa_version):
 
   schedules_default = [
     [KernelScheduleType.Tme, EpilogueScheduleType.WithTme],
+    [KernelScheduleType.TmeWarpSpecialized, EpilogueScheduleType.NoSmem],
   ]
 
   aligns = [
@@ -742,7 +890,12 @@ def GenerateMP31_TensorOp_gemm_s8(manifest, musa_version):
       [[LayoutType.ColumnMajor, align_a], [LayoutType.RowMajor,    align_b], [LayoutType.RowMajor,    align_c]],
     ]
 
-    CreateGemmUniversal3xOperator(manifest, layouts, tile_descriptions, data_types, schedules_default)
+    for schedule in schedules_default:
+        for tile_description in tile_descriptions:
+          if schedule[0] == KernelScheduleType.TmeWarpSpecialized and tile_description.threadblock_shape[0] > 256:
+            continue
+          CreateGemmUniversal3xOperator(manifest, layouts, [tile_description], data_types, [schedule])
+
 
 
 #
@@ -758,6 +911,8 @@ def GenerateMP31(manifest, musa_version):
   GenerateMP31_TensorOp_gemm_tf32(manifest, musa_version)
   GenerateMP31_TensorOp_gemm_f16(manifest, musa_version)
   GenerateMP31_TensorOp_gemm_bf16(manifest, musa_version)
+  GenerateMP31_TensorOp_gemm_e4m3(manifest, musa_version)
+  GenerateMP31_TensorOp_gemm_e5m2(manifest, musa_version)
   GenerateMP31_TensorOp_gemm_s8(manifest, musa_version)
 
 ###################################################################################################

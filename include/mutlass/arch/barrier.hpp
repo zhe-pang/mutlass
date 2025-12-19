@@ -71,6 +71,7 @@ public:
     AsyncBarrier::init(id_, arrive_count, init_phase);
   }
 
+
   template <bool return_phase = false>
   MUTLASS_DEVICE
   auto arrive() const {
@@ -80,6 +81,11 @@ public:
   MUTLASS_DEVICE
   void wait(uint32_t phase) const {
     AsyncBarrier::wait(id_, phase);
+  }
+
+  MUTLASS_DEVICE
+  void sync() const {
+    AsyncBarrier::sync(id_);
   }
 
   MUTLASS_DEVICE
@@ -112,6 +118,14 @@ public:
     } else {
       return;
     }
+#endif
+  }
+
+  MUTLASS_DEVICE
+  static void sync(uint32_t id) {
+#if MUSA_BARRIER_ENABLED
+    auto phase = __musa_async_arrive(id);
+    __musa_async_wait(id, phase);
 #endif
   }
 

@@ -1446,6 +1446,64 @@ struct NumericArrayConverter<mutlass::half_t, float, 2, FloatRoundStyle::round_t
   }
 };
 
+#if defined(__MUSA_ARCH__) && (__MUSA_ARCH__ >= 310)
+/// Partial specialization for Array<half, 4> <= Array<float, 4>, round to nearest
+template <>
+struct NumericArrayConverter<mutlass::half_t, float, 4, FloatRoundStyle::round_to_nearest> {
+
+  using result_type = Array<mutlass::half_t, 4>;
+  using source_type = Array<float, 4>;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_to_nearest;
+
+  MUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & source) {
+    Array<mutlass::half_t, 4> result;
+    reinterpret_cast<__half4 &>(result) = __float42half4_rn(reinterpret_cast<float4 const &>(source));
+    return result;
+  }
+
+  MUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) const {
+    return convert(s);
+  }
+
+};
+
+/// Partial specialization for Array<half, 4> <= Array<float, 4>, round to nearest
+template <>
+struct NumericArrayConverter<mutlass::half_t, float, 8, FloatRoundStyle::round_to_nearest> {
+
+  using result_type = Array<mutlass::half_t, 8>;
+  using source_type = Array<float, 8>;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_to_nearest;
+
+  MUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & source) {
+
+    NumericArrayConverter<mutlass::half_t, float, 4, round_style> convert_vector_;
+
+    result_type result;
+
+    Array<mutlass::half_t, 4> *result_ptr = reinterpret_cast<Array<mutlass::half_t, 4> *>(&result);
+    Array<float, 4> const *source_ptr = reinterpret_cast<Array<float, 4> const *>(&source);
+
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < 2; ++i) {
+      result_ptr[i] = convert_vector_(source_ptr[i]);
+    }
+
+    return result;
+  }
+
+  MUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) const {
+    return convert(s);
+  }
+
+};
+
+#endif // if defined(__MUSA_ARCH__) && (__MUSA_ARCH__ >= 310)
+
 /// Partial specialization for Array<float, 2> <= Array<mutlass::half_t, 2>, round to nearest
 template <FloatRoundStyle Round>
 struct NumericArrayConverter<float, mutlass::half_t, 2, Round> {
@@ -1581,6 +1639,65 @@ struct NumericArrayConverter<mutlass::bfloat16_t, float, 2, FloatRoundStyle::rou
     return convert(s);
   }
 };
+
+#if defined(__MUSA_ARCH__) && (__MUSA_ARCH__ >= 310)
+/// Partial specialization for Array<mutlass::bfloat16_t, 4> <= Array<float, 4>, round to nearest
+template <>
+struct NumericArrayConverter<mutlass::bfloat16_t, float, 4, FloatRoundStyle::round_to_nearest> {
+
+  using result_type = Array<mutlass::bfloat16_t, 4>;
+  using source_type = Array<float, 4>;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_to_nearest;
+
+  MUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & source) {
+
+    Array<mutlass::bfloat16_t, 4> result;
+
+    reinterpret_cast<__mt_bfloat164 &>(result) = __float42bfloat164_rn(reinterpret_cast<float4 const &>(source));
+
+    return result;
+  }
+
+  MUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) const {
+    return convert(s);
+  }
+};
+
+/// Partial specialization for Array<mutlass::bfloat16_t, 8> <= Array<float, 8>, round to nearest
+template <>
+struct NumericArrayConverter<mutlass::bfloat16_t, float, 8, FloatRoundStyle::round_to_nearest> {
+
+  using result_type = Array<mutlass::bfloat16_t, 8>;
+  using source_type = Array<float, 8>;
+  static FloatRoundStyle const round_style = FloatRoundStyle::round_to_nearest;
+
+  MUTLASS_HOST_DEVICE
+  static result_type convert(source_type const & source) {
+
+    NumericArrayConverter<mutlass::bfloat16_t, float, 4, round_style> convert_vector_;
+
+    result_type result;
+
+    Array<mutlass::bfloat16_t, 4> *result_ptr = reinterpret_cast<Array<mutlass::bfloat16_t, 4> *>(&result);
+    Array<float, 4> const *source_ptr = reinterpret_cast<Array<float, 4> const *>(&source);
+
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < 2; ++i) {
+      result_ptr[i] = convert_vector_(source_ptr[i]);
+    }
+
+    return result;
+  }
+
+  MUTLASS_HOST_DEVICE
+  result_type operator()(source_type const &s) const {
+    return convert(s);
+  }
+};
+
+#endif // if defined(__MUSA_ARCH__) && (__MUSA_ARCH__ >= 310)
 
 /// Partial specialization for Array<mutlass::bfloat16_t> <= Array<float>
 template <

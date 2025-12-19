@@ -66,17 +66,17 @@ using namespace mute;
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 // A matrix configuration
-using         ElementA    = mutlass::float_e4m3_t;                                // Element type for A matrix operand
-using         LayoutA     = mutlass::layout::RowMajor;                   // Layout type for A matrix operand
+using         ElementA    = mutlass::float_e4m3_t;                          // Element type for A matrix operand
+using         LayoutA     = mutlass::layout::RowMajor;                      // Layout type for A matrix operand
 constexpr int AlignmentA  = 128 / mutlass::sizeof_bits<ElementA>::value;    // Memory access granularity/alignment of A matrix in units of elements (up to 16 bytes)
 
 // B matrix configuration
-using         ElementB    = mutlass::float_e4m3_t;                               // Element type for B matrix operand
-using         LayoutB     = mutlass::layout::ColumnMajor;                      // Layout type for B matrix operand
+using         ElementB    = mutlass::float_e4m3_t;                          // Element type for B matrix operand
+using         LayoutB     = mutlass::layout::ColumnMajor;                   // Layout type for B matrix operand
 constexpr int AlignmentB  = 128 / mutlass::sizeof_bits<ElementB>::value;    // Memory access granularity/alignment of B matrix in units of elements (up to 16 bytes)
 
 // C matrix configuration
-using         ElementC    = mutlass::half_t;                                // Element type for C and D matrix operands
+using         ElementC    = float;                                          // Element type for C and D matrix operands
 using         LayoutC     = mutlass::layout::RowMajor;                      // Layout type for C and D matrix operands
 constexpr int AlignmentC  = 128 / mutlass::sizeof_bits<ElementC>::value;    // Memory access granularity/alignment of C matrix in units of elements (up to 16 bytes)
 
@@ -90,9 +90,9 @@ using ElementAccumulator  = float;                                           // 
 using ElementBlockScale   = float;
 using ElementCompute      = float;                                           // Element type for epilogue computation
 
-using TileShapeMNK        = Shape<_128,_256,_32>;                            // Threadblock-level tile size
+using TileShapeMNK        = Shape<_128,_256,_128>;                           // Threadblock-level tile size
 
-using StageCountType      = mutlass::gemm::collective::StageCount<4>;       // Stage count
+using StageCountType      = mutlass::gemm::collective::StageCount<2>;       // Stage count
 
 
 // ScaleGranularityM/N: number of rows in A/columns in B that share the same scaling factor
@@ -122,8 +122,8 @@ struct GroupScaleConfig {
   static_assert(size<2>(TileShape{}) * ScalePromotionInterleave == ScaleGranularityK,
               "FP8 scaling granularity must be a multiple of the tile shape alone K.");
 
-  using KernelSchedule      = mutlass::gemm::KernelTmeGroupScaledAccum<ScaleGranularityM, ScaleGranularityN, ScaleGranularityK>;                        // Kernel to launch
-  using EpilogueSchedule    = mutlass::epilogue::WithTme;                      // Epilogue to launch
+  using KernelSchedule      = mutlass::gemm::KernelTmeWarpSpecializedScaledAccum<ScaleGranularityM, ScaleGranularityN, ScaleGranularityK>;                        // Kernel to launch
+  using EpilogueSchedule    = mutlass::epilogue::NoSmem;                      // Epilogue to launch
   using ThreadEpilogueOp    = mutlass::epilogue::fusion::LinearCombination<ElementD,ElementCompute,ElementC,ElementCompute>;
 };
 
@@ -173,7 +173,8 @@ struct GroupScaleGemm {
   using GemmKernel = mutlass::gemm::kernel::GemmUniversal<
     Shape<int,int,int>, // Indicates ProblemShape
     CollectiveMainloop,
-    CollectiveEpilogue
+    CollectiveEpilogue,
+    mutlass::gemm::PersistentScheduler
   >;
 
   using Gemm = mutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
@@ -210,7 +211,7 @@ mutlass::HostTensor<ElementBlockScale, LayoutA> blockscale_tensor_A;
 mutlass::HostTensor<ElementBlockScale, LayoutB> blockscale_tensor_B;
 mutlass::HostTensor<ElementD, LayoutD> tensor_ref_D;
 
-using RasterOrderOptions = typename mutlass::gemm::kernel::detail::TileSchedulerDefaultParams::RasterOrderOptions;
+using RasterOrderOptions = typename mutlass::gemm::kernel::detail::TileSchedulerPersistParams::RasterOrderOptions;
 
 // Command line options parsing
 struct Options {
@@ -282,23 +283,23 @@ bool initialize_tensor(
     uint64_t seed) {
 
   if (dist_kind == mutlass::Distribution::Uniform) {
-    double scope_max, scope_min;
+    Element scope_max, scope_min;
 
     int bits_input = mutlass::sizeof_bits<Element>::value;
     int bits_output = mutlass::sizeof_bits<Element>::value;
 
     if (bits_input == 1) {
-      scope_max = 2;
-      scope_min = 0;
+      scope_max = Element(2);
+      scope_min = Element(0);
     } else if (bits_input <= 8) {
-      scope_max = 2;
-      scope_min = -2;
+      scope_max = Element(2);
+      scope_min = Element(-2);
     } else if (bits_output == 16) {
-      scope_max = 5;
-      scope_min = -5;
+      scope_max = Element(5);
+      scope_min = Element(-5);
     } else {
-      scope_max = 8;
-      scope_min = -8;
+      scope_max = Element(8);
+      scope_min = Element(-8);
     }
 
     mutlass::reference::host::TensorFillRandomUniform(
@@ -330,10 +331,10 @@ bool initialize_scale_tensor(
 
   if (dist_kind == mutlass::Distribution::Uniform) {
     double scope_max, scope_min;
-    scope_max = 1;
-    scope_min = -1;
+    scope_max = 1e-4;
+    scope_min = 1e-5;
     mutlass::reference::host::TensorFillRandomUniform(
-      view, seed, scope_max, scope_min, 0);
+      view, seed, scope_max, scope_min);
   }
   else if (dist_kind == mutlass::Distribution::AllZeros) {
     mutlass::reference::host::TensorFill(view);
@@ -388,6 +389,7 @@ void initialize(const Options &options) {
   blockscale_tensor_B.resize(groupscale_b_coord);
   tensor_C.resize(c_coord);
   tensor_D.resize(c_coord);
+  tensor_ref_D.resize(c_coord);
 
   mutlass::Distribution::Kind dist_A = mutlass::Distribution::Uniform;
   mutlass::Distribution::Kind dist_B = mutlass::Distribution::Uniform;
@@ -512,7 +514,7 @@ bool verify(Options const& options) {
 
   // compare_reference
   tensor_D.sync_host();
-  bool passed = mutlass::reference::host::TensorEquals(tensor_ref_D.host_view(), tensor_D.host_view());
+  bool passed = mutlass::reference::host::TensorRelativelyEquals(tensor_ref_D.host_view(), tensor_D.host_view(), ElementD(1e-3), ElementD(1e-3));
 
   if (false) {
     std::cout << "tensor_ref_D.host_view() {" << std::endl
@@ -555,6 +557,40 @@ int run(Options const& options) {
   bool passed = verify<GroupScaleConfig>(options);
 
   std::cout << "  Disposition: " << (passed ? "Passed" : "Failed") << std::endl;
+
+  if (!passed) {
+    exit(-1);
+  }
+
+  if (options.iterations > 0)
+  {
+    GpuTimer timer;
+    timer.start();
+    for (int iter = 0; iter < options.iterations; ++iter) {
+      MUTLASS_CHECK(gemm.initialize(arguments, workspace.get()));
+      MUTLASS_CHECK(gemm.run());
+    }
+    timer.stop();
+
+    // Compute average runtime and GFLOPs.
+    float elapsed_ms = timer.elapsed_millis();
+    double avg_runtime_ms = double(elapsed_ms) / double(options.iterations);
+    double gflops = options.gflops(avg_runtime_ms / 1000.0);
+
+    std::string raster = "Heuristic";
+
+    if (options.raster == RasterOrderOptions::AlongN) {
+      raster = "Along N";
+    }
+    else if (options.raster == RasterOrderOptions::AlongM) {
+      raster = "Along M";
+    }
+
+    std::cout << "  Problem Size: " << options.m << 'x' << options.n << 'x' << options.k << std::endl;
+    std::cout << "  Rasterization: " << raster << " with a maximum CTA swizzle of " << options.swizzle << std::endl;
+    std::cout << "  Avg runtime: " << avg_runtime_ms << " ms" << std::endl;
+    std::cout << "  GFLOPS: " << gflops << std::endl;
+  }
 
   return 0;
 }

@@ -33,7 +33,7 @@ include(GNUInstallDirs)
 
 ################################################################################
 
-set(MUTLASS_BUILD_MONO_LIBRARY OFF CACHE BOOL 
+set(MUTLASS_BUILD_MONO_LIBRARY OFF CACHE BOOL
   "Determines whether the mutlass library is generated as a single file or multiple files.")
 
 ################################################################################
@@ -50,8 +50,8 @@ target_include_directories(
   )
 
 target_link_libraries(
-  mutlass_library_includes 
-  INTERFACE 
+  mutlass_library_includes
+  INTERFACE
   MUTLASS
   mutlass_tools_util_includes
   )
@@ -87,9 +87,9 @@ target_link_libraries(
 function(mutlass_add_mutlass_library)
 #
 # Generates static and shared libraries with the given SOURCES. The public CMake
-# targets produces will be mutlass_library(_${SUFFIX})? and 
+# targets produces will be mutlass_library(_${SUFFIX})? and
 # mutlass_library(_${SUFFIX})?_static.
-# 
+#
 # SUFFIX: An additional string to be joined to the default names. If suffix is given,
 #   the generated libraries will be linked as a dependency of the main mutlass library.
 
@@ -114,7 +114,7 @@ function(mutlass_add_mutlass_library)
     ${__UNPARSED_ARGUMENTS}
     MP_ARCHS_ ${__MP_ARCHS}
     MCC_FLAGS_ ${__MCC_FLAGS}
-    )  
+    )
 
   target_link_libraries(${__NAME}_objs
     PUBLIC mutlass_library_includes
@@ -124,28 +124,28 @@ function(mutlass_add_mutlass_library)
   if (MUTLASS_BUILD_MONO_LIBRARY AND __SUFFIX)
 
     # If we're only building a single monolithic library then we
-    # simply link the generated object files to the default library. 
+    # simply link the generated object files to the default library.
 
     target_link_libraries(${DEFAULT_NAME} PRIVATE $<BUILD_INTERFACE:${__NAME}_objs>)
     target_link_libraries(${DEFAULT_NAME}_static PRIVATE $<BUILD_INTERFACE:${__NAME}_objs>)
 
   else()
 
-    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/temp.mu)
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/${__NAME}_temp.mu)
     mutlass_add_library(
-      ${__NAME} 
+      ${__NAME}
       SHARED
       EXPORT_NAME ${__EXPORT_NAME}
-      ${CMAKE_CURRENT_BINARY_DIR}/temp.mu
+      ${CMAKE_CURRENT_BINARY_DIR}/${__NAME}_temp.mu
       )
-    
+
     set_target_properties(
       ${__NAME}
       PROPERTIES
       OUTPUT_NAME ${__OUTPUT_NAME}
       WINDOWS_EXPORT_ALL_SYMBOLS 1
       )
-    
+
     target_link_libraries(
       ${__NAME}
       PUBLIC mutlass_library_includes
@@ -153,38 +153,38 @@ function(mutlass_add_mutlass_library)
       -Wl,--no-whole-archive
       musa_driver
       )
-    
+
     set_target_properties(${__NAME} PROPERTIES DEBUG_POSTFIX "${MUTLASS_LIBRARY_DEBUG_POSTFIX}")
-    
+
     mutlass_add_library(
       ${__NAME}_static
       STATIC
       EXPORT_NAME ${__EXPORT_NAME}_static
-      ${CMAKE_CURRENT_BINARY_DIR}/temp.mu
+      ${CMAKE_CURRENT_BINARY_DIR}/${__NAME}_temp.mu
       )
-    
+
     if (WIN32)
       set(STATIC_OUTPUT_NAME ${__OUTPUT_NAME}.static)
     else()
       set(STATIC_OUTPUT_NAME ${__OUTPUT_NAME})
     endif()
-    
+
     set_target_properties(
       ${__NAME}_static
       PROPERTIES
       OUTPUT_NAME ${STATIC_OUTPUT_NAME}
       WINDOWS_EXPORT_ALL_SYMBOLS 1
       )
-    
+
     target_link_libraries(
       ${__NAME}_static
       PUBLIC mutlass_library_includes
       PRIVATE $<BUILD_INTERFACE:${__NAME}_objs>
       musa_driver
       )
-    
+
     set_target_properties(${__NAME}_static PROPERTIES DEBUG_POSTFIX "${MUTLASS_LIBRARY_DEBUG_POSTFIX}")
-    
+
     install(
       TARGETS ${__NAME} ${__NAME}_static
       EXPORT MtMutlass
@@ -192,16 +192,16 @@ function(mutlass_add_mutlass_library)
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
       ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
       )
-    
+
     if (__SUFFIX)
-    
+
       # The partial libraries generated will be registered as linked libraries
       # to the main mutlass library so users automatically get the necessary link
       # commands to pull in all kernels by default.
-    
+
       target_link_libraries(${DEFAULT_NAME} INTERFACE ${__NAME})
       target_link_libraries(${DEFAULT_NAME}_static INTERFACE ${__NAME}_static)
-    
+
     endif()
 
   endif()
@@ -237,7 +237,7 @@ file(GLOB_RECURSE GENERATOR_PYTHON_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOU
 # auto-instantiation of MUTLASS kernels
 #
 
-# set mutlass generator compiler version to filter kernels in the generator not supported by a specific toolkit. 
+# set mutlass generator compiler version to filter kernels in the generator not supported by a specific toolkit.
 set(MUTLASS_GENERATOR_MUSA_COMPILER_VERSION ${CMAKE_MUSA_COMPILER_VERSION})
 set(MUTLASS_LIBRARY_GENERATED_KERNEL_LIST_FILE ${CMAKE_CURRENT_BINARY_DIR}/generated_kernels.txt CACHE STRING "Generated kernel listing file")
 
@@ -248,7 +248,7 @@ execute_process(
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../../python/mutlass_library
   COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${MUTLASS_LIBRARY_PACKAGE_DIR}
     ${Python3_EXECUTABLE} ${MUTLASS_SOURCE_DIR}/python/mutlass_library/generator.py
-    --operations "${MUTLASS_LIBRARY_OPERATIONS}" 
+    --operations "${MUTLASS_LIBRARY_OPERATIONS}"
     --build-dir ${PROJECT_BINARY_DIR}
     --curr-build-dir ${CMAKE_CURRENT_BINARY_DIR}
     --generator-target library
@@ -286,4 +286,3 @@ install(
   FILES ${MUTLASS_LIBRARY_GENERATED_KERNEL_LIST_FILE}
   DESTINATION ${CMAKE_INSTALL_INFODIR}/mutlass/
   )
-

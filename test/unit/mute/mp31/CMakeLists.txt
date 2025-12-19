@@ -30,4 +30,10 @@ mutlass_test_unit_add_executable(
   mutlass_test_unit_mute_mp31
   mp31_sqmma.mu
   mp31_robust_buffer_access.mu
+  tme_im2col_load.mu
+)
+
+mutlass_test_unit_add_executable(
+  mutlass_test_unit_mute_load
+  tme_load.mu
 )

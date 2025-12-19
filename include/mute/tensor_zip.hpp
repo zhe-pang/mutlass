@@ -32,7 +32,7 @@
 #pragma once
 
 #include <mute/config.hpp>           // MUTE_HOST_DEVICE
-#include <mute/tensor.hpp>           // mute::Tensor
+#include <mute/tensor_impl.hpp>      // mute::Tensor
 #include <mute/container/tuple.hpp>  // mute::tuple
 
 namespace mute

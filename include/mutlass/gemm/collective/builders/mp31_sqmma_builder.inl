@@ -117,14 +117,94 @@ struct CollectiveBuilder<
   using GmemTiledCopyA = MP31_TME_LOAD;
   using GmemTiledCopyB = MP31_TME_LOAD;
 
-  using SmemLayoutAtomA = decltype(detail::ss_smem_selector_A<SqmmaMajorA, ElementAMma, SqmmaOp>());
-  using SmemLayoutAtomB = decltype(detail::ss_smem_selector_B<SqmmaMajorB, ElementBMma, SqmmaOp>());
+  using SmemLayoutAtomA = decltype(detail::ss_smem_selector_A<SqmmaMajorA, ElementAMma, SqmmaOp, TileShape_MNK>());
+  using SmemLayoutAtomB = decltype(detail::ss_smem_selector_B<SqmmaMajorB, ElementBMma, SqmmaOp, TileShape_MNK>());
 
   using SmemCopyAtomA = void;
   using SmemCopyAtomB = void;
 
   static constexpr int PipelineStages = detail::compute_stage_count_or_override<detail::mp31_smem_capacity_bytes, ElementAMma, ElementBMma, TileShape_MNK>(StageCountType{});
   using DispatchPolicy = MainloopMp31TmeSqmma<PipelineStages>;
+
+  using ClusterShape_MNK_ = Shape<_1, _1, _1>;
+
+  using CollectiveOp = CollectiveMma<
+      DispatchPolicy,
+      TileShape_MNK,
+      ElementA,
+      TagToStrideA_t<GmemLayoutATag>,
+      ElementB,
+      TagToStrideB_t<GmemLayoutBTag>,
+      TiledMma,
+      GmemTiledCopyA,
+      SmemLayoutAtomA,
+      SmemCopyAtomA,
+      mute::identity,
+      GmemTiledCopyB,
+      SmemLayoutAtomB,
+      SmemCopyAtomB,
+      mute::identity
+  >;
+};
+
+//SQMMA with persistent
+template <
+  class ElementA,
+  class GmemLayoutATag,
+  int AlignmentA,
+  class ElementB,
+  class GmemLayoutBTag,
+  int AlignmentB,
+  class ElementAccumulator,
+  class TileShape_MNK,
+  class ClusterShape_MNK,
+  class StageCountType,
+  class KernelScheduleType
+>
+struct CollectiveBuilder<
+  arch::Mp31,
+  arch::OpClassTensorOp,
+  ElementA,
+  GmemLayoutATag,
+  AlignmentA,
+  ElementB,
+  GmemLayoutBTag,
+  AlignmentB,
+  ElementAccumulator,
+  TileShape_MNK,
+  ClusterShape_MNK,
+  StageCountType,
+  KernelScheduleType,
+  mute::enable_if_t<mute::is_same_v<KernelScheduleType, KernelTmeWarpSpecialized>>
+> {
+  static_assert(is_static<TileShape_MNK>::value);
+  static_assert(is_static<ClusterShape_MNK>::value);
+
+  static_assert(detail::is_aligned<ElementA, AlignmentA, ElementB, AlignmentB, detail::tme_alignment_bytes>(),
+      "Should meet TME alignment requirement\n");
+
+  // For fp32 types, map to tf32 MMA value type
+  using ElementAMma = mute::conditional_t<mute::is_same_v<ElementA, float>, tfloat32_t, ElementA>;
+  using ElementBMma = mute::conditional_t<mute::is_same_v<ElementB, float>, tfloat32_t, ElementB>;
+
+  static constexpr mute::TCE::Major SqmmaMajorA = detail::sqmma_ss_tag_to_major_A<GmemLayoutATag>();
+  static constexpr mute::TCE::Major SqmmaMajorB = detail::sqmma_ss_tag_to_major_B<GmemLayoutBTag>();
+
+  using SqmmaOp = decltype(mute::MP31::SQMMA::ss_op_selector<ElementA, ElementB, ElementAccumulator, TileShape_MNK, SqmmaMajorA, SqmmaMajorB>());
+
+  using TiledMma = decltype(detail::mp31_make_sqmma_tiled_mma<TileShape_MNK, SqmmaOp>());
+
+  using GmemTiledCopyA = MP31_TME_LOAD;
+  using GmemTiledCopyB = MP31_TME_LOAD;
+
+  using SmemLayoutAtomA = decltype(detail::ss_smem_selector_A<SqmmaMajorA, ElementAMma, SqmmaOp, TileShape_MNK>());
+  using SmemLayoutAtomB = decltype(detail::ss_smem_selector_B<SqmmaMajorB, ElementBMma, SqmmaOp, TileShape_MNK>());
+
+  using SmemCopyAtomA = void;
+  using SmemCopyAtomB = void;
+
+  static constexpr int PipelineStages = detail::compute_stage_count_or_override<detail::mp31_smem_capacity_bytes, ElementAMma, ElementBMma, TileShape_MNK>(StageCountType{});
+  using DispatchPolicy = MainloopMp31TmeSqmmaWarpSpecialized<PipelineStages>;
 
   using ClusterShape_MNK_ = Shape<_1, _1, _1>;
 
@@ -204,8 +284,8 @@ struct CollectiveBuilder<
   using GmemTiledCopyA = MP31_TME_LOAD;
   using GmemTiledCopyB = MP31_TME_LOAD;
 
-  using SmemLayoutAtomA = decltype(detail::ss_smem_selector_A<SqmmaMajorA, ElementAMma, SqmmaOp>());
-  using SmemLayoutAtomB = decltype(detail::ss_smem_selector_B<SqmmaMajorB, ElementBMma, SqmmaOp>());
+  using SmemLayoutAtomA = decltype(detail::ss_smem_selector_A<SqmmaMajorA, ElementAMma, SqmmaOp, TileShape_MNK>());
+  using SmemLayoutAtomB = decltype(detail::ss_smem_selector_B<SqmmaMajorB, ElementBMma, SqmmaOp, TileShape_MNK>());
 
   using SmemCopyAtomA = void;
   using SmemCopyAtomB = void;
@@ -213,6 +293,92 @@ struct CollectiveBuilder<
   static constexpr int PipelineStages = detail::compute_stage_count_or_override<detail::mp31_smem_capacity_bytes, ElementAMma, ElementBMma, TileShape_MNK>(StageCountType{});
 
   using DispatchPolicy = MainloopMp31TmeSqmmaBlockScalingFP8<PipelineStages, KernelScheduleType, ScaleGranularityM, ScaleGranularityN, ScaleGranularityK>;
+
+  using CollectiveOp = CollectiveMma<
+      DispatchPolicy,
+      TileShape_MNK,
+      ElementA,
+      TagToStrideA_t<GmemLayoutATag>,
+      ElementB,
+      TagToStrideB_t<GmemLayoutBTag>,
+      TiledMma,
+      GmemTiledCopyA,
+      SmemLayoutAtomA,
+      SmemCopyAtomA,
+      mute::identity,
+      GmemTiledCopyB,
+      SmemLayoutAtomB,
+      SmemCopyAtomB,
+      mute::identity
+  >;
+};
+
+//
+template <
+  class ElementA,
+  class GmemLayoutATag,
+  int AlignmentA,
+  class ElementB,
+  class GmemLayoutBTag,
+  int AlignmentB,
+  class ElementAccumulator,
+  class TileShape_MNK,
+  class ClusterShape_MNK,
+  class StageCountType,
+  int ScaleGranularityM,
+  int ScaleGranularityN,
+  int ScaleGranularityK
+>
+struct CollectiveBuilder<
+  arch::Mp31,
+  arch::OpClassTensorOp,
+  ElementA,
+  GmemLayoutATag,
+  AlignmentA,
+  ElementB,
+  GmemLayoutBTag,
+  AlignmentB,
+  ElementAccumulator,
+  TileShape_MNK,
+  ClusterShape_MNK,
+  StageCountType,
+  KernelTmeWarpSpecializedScaledAccum<ScaleGranularityM, ScaleGranularityN, ScaleGranularityK>
+> {
+  using KernelScheduleType = KernelTmeWarpSpecializedScaledAccum<ScaleGranularityM, ScaleGranularityN, ScaleGranularityK>;
+
+  static_assert(is_static<TileShape_MNK>::value);
+  static_assert(is_static<ClusterShape_MNK>::value);
+
+  static_assert(detail::is_aligned<ElementA, AlignmentA, ElementB, AlignmentB, detail::tme_alignment_bytes>(),
+      "Should meet TME alignment requirement\n");
+
+  static constexpr bool IsFP8Input = detail::is_input_fp8<ElementA, ElementB>();
+
+  static_assert(IsFP8Input, "KernelTmeGroupScaledAccum is only compatible with FP8 now.");
+
+  // For fp32 types, map to tf32 MMA value type
+  using ElementAMma = mute::conditional_t<mute::is_same_v<ElementA, float>, tfloat32_t, ElementA>;
+  using ElementBMma = mute::conditional_t<mute::is_same_v<ElementB, float>, tfloat32_t, ElementB>;
+
+  static constexpr mute::TCE::Major SqmmaMajorA = detail::sqmma_ss_tag_to_major_A<GmemLayoutATag>();
+  static constexpr mute::TCE::Major SqmmaMajorB = detail::sqmma_ss_tag_to_major_B<GmemLayoutBTag>();
+
+  using MaxInstructionM = Int<128>;
+  using SqmmaOp = decltype(mute::MP31::SQMMA::ss_op_selector<ElementA, ElementB, ElementAccumulator, TileShape_MNK, SqmmaMajorA, SqmmaMajorB, MaxInstructionM>());
+  using TiledMma = decltype(detail::mp31_make_sqmma_tiled_mma<TileShape_MNK, SqmmaOp>());
+
+  using GmemTiledCopyA = MP31_TME_LOAD;
+  using GmemTiledCopyB = MP31_TME_LOAD;
+
+  using SmemLayoutAtomA = decltype(detail::ss_smem_selector_A<SqmmaMajorA, ElementAMma, SqmmaOp, TileShape_MNK>());
+  using SmemLayoutAtomB = decltype(detail::ss_smem_selector_B<SqmmaMajorB, ElementBMma, SqmmaOp, TileShape_MNK>());
+
+  using SmemCopyAtomA = void;
+  using SmemCopyAtomB = void;
+
+  static constexpr int PipelineStages = detail::compute_stage_count_or_override<detail::mp31_smem_capacity_bytes, ElementAMma, ElementBMma, TileShape_MNK>(StageCountType{});
+
+  using DispatchPolicy = MainloopMp31TmeSqmmaBlockWarpSpecializedScalingFP8<PipelineStages, KernelScheduleType, ScaleGranularityM, ScaleGranularityN, ScaleGranularityK>;
 
   using CollectiveOp = CollectiveMma<
       DispatchPolicy,

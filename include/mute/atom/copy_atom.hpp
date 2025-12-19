@@ -751,3 +751,4 @@ print_latex_copy(LayoutS const& S, ThrIDS const& TS,  // (m,n) -> (tid,vid)  and
 
 #include <mute/atom/copy_traits_mp31.hpp>
 #include <mute/atom/copy_traits_mp31_tme.hpp>
+#include <mute/atom/copy_traits_mp31_im2col.hpp>

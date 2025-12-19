@@ -208,4 +208,251 @@ public:
   }
 };
 
+// Struct for iteration-scale. 
+template <
+  class EngineAccum, class LayoutAccum,
+  class EngineScaleA_, class LayoutScaleA_,
+  class EngineScaleB_, class LayoutScaleB_>
+struct ScalingAccumulation_Iterative {
+  using TensorAccum = mute::Tensor<EngineAccum, LayoutAccum>;
+  using TensorScaleA = mute::Tensor<EngineScaleA_, LayoutScaleA_>;
+  using TensorScaleB = mute::Tensor<EngineScaleB_, LayoutScaleB_>;
+  using ElementAccumulator = typename EngineAccum::value_type;
+  using ElementScaleBlock = typename EngineScaleA_::value_type;
+
+  static_assert(is_static<LayoutAccum>::value, "Accumulator Layout should be static");
+  static_assert(is_rmem<TensorAccum>::value, "Accumulator tensor must be rmem resident.");
+
+private:
+  TensorAccum& accum_;
+  TensorScaleA iterative_scaleA;
+  TensorScaleB iterative_scaleB;
+
+  uint32_t accum_promotion_interval_;         // defines the max num of executed MMAs after which accum should be promoted.
+  uint32_t mma_count_per_mainloop_iteration_; // num of MMAs per k_tile of mainloop
+  uint32_t mma_count_;                        // current executed MMAs
+  uint32_t reset_accum_flag_;                 // accum needs to be zeroed or not.
+
+  template <
+    class EngineScale,
+    class LayoutScale>
+  MUTLASS_DEVICE
+  void scale_core(const mute::Tensor<EngineScale, LayoutScale> &scale) {
+    using TensorScale = mute::Tensor<EngineScale, LayoutScale>;
+
+    static_assert(is_static<LayoutScale>::value, "Scale Layout should be static");
+    static_assert(is_rmem<TensorScale>::value , "Scale tensor must be rmem resident.");
+
+    static_assert(LayoutAccum{}.shape() == LayoutScale{}.shape(), "Accumulator and scale must have same shape.");
+
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(accum_); ++i) {
+      accum_(i) *= scale(i);
+    }
+  }
+
+  template <
+    class EngineScaleA,
+    class LayoutScaleA,
+    class EngineScaleB,
+    class LayoutScaleB>
+  MUTLASS_DEVICE
+  void scale_core(const mute::Tensor<EngineScaleA, LayoutScaleA> &scaleA,
+                  const mute::Tensor<EngineScaleB, LayoutScaleB> &scaleB) {
+    using TensorScaleA = mute::Tensor<EngineScaleA, LayoutScaleA>;
+    using TensorScaleB = mute::Tensor<EngineScaleB, LayoutScaleB>;
+
+    static_assert(is_static<LayoutScaleA>::value, "ScaleA Layout should be static");
+    static_assert(is_static<LayoutScaleB>::value, "ScaleB Layout should be static");
+    static_assert(is_rmem<TensorScaleA>::value , "ScaleA tensor must be rmem resident.");
+    static_assert(is_rmem<TensorScaleB>::value , "ScaleB tensor must be rmem resident.");
+
+    static_assert(LayoutAccum{}.shape() == LayoutScaleA{}.shape(), "Accumulator and scaleA must have same shape.");
+    static_assert(LayoutAccum{}.shape() == LayoutScaleB{}.shape(), "Accumulator and scaleB must have same shape.");
+
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(accum_); ++i) {
+      accum_(i) *= scaleA(i) * scaleB(i);
+    }
+  }
+
+  MUTLASS_DEVICE
+  void div_coreA() {
+    //warpsquad_wait();
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(accum_); ++i) {
+      accum_(i) *= iterative_scaleA(i);
+    }
+  }
+
+  MUTLASS_DEVICE
+  void div_coreB() {
+    //warpsquad_wait();
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(accum_); ++i) {
+      accum_(i) *= iterative_scaleB(i);
+    }
+  }
+
+  MUTLASS_DEVICE
+  void div_coreAB() {
+    //warpsquad_wait();
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(accum_); ++i) {
+      accum_(i) *= iterative_scaleA(i) * iterative_scaleB(i);
+      //accum_(i) *= iterative_scaleB(i);
+    }
+  }
+
+
+public:
+  MUTLASS_DEVICE
+  ScalingAccumulation_Iterative(
+      TensorAccum &accum,
+      uint32_t accum_promotion_interval,
+      uint32_t mma_count_per_mainloop_iteration,
+      const TensorScaleA &scaleA,
+      const TensorScaleB &scaleB
+      )
+      : accum_(accum),
+        accum_promotion_interval_(accum_promotion_interval),
+        mma_count_per_mainloop_iteration_(mma_count_per_mainloop_iteration),
+        mma_count_(0),
+        reset_accum_flag_(0) {
+          iterative_scaleA = mute::make_tensor_like<ElementScaleBlock>(scaleA);
+          iterative_scaleB = mute::make_tensor_like<ElementScaleBlock>(scaleB);
+        }
+
+  //
+  // Methods (Common)
+  //
+  MUTLASS_DEVICE
+  TensorAccum& operator()() {
+    return accum_;
+  }
+
+  MUTLASS_DEVICE
+  bool prepare_if_needed() {
+    //return reset_accum_flag_;
+    return mma_count_ == 0;
+  }
+
+  /// scale (multiply_add) the results from the MMA accumulators to main accumulator if needed.
+
+  MUTLASS_DEVICE
+  void advance() {
+    mma_count_ += mma_count_per_mainloop_iteration_;
+    reset_accum_flag_ = mma_count_ == accum_promotion_interval_;
+    if (reset_accum_flag_) {
+      mma_count_ = 0;
+    }
+  }
+
+
+  /// scale (multiply_add) the residue results from the MMA accumulators to main accumulator if needed.
+  template <class ElementScale>
+  MUTLASS_DEVICE
+  void scale_residue_if_needed(ElementScale const &scale) {
+    scale_core(scale);
+  }
+
+  template <
+    class EngineScale,
+    class LayoutScale>
+  MUTLASS_DEVICE
+  void scale_residue_if_needed(const mute::Tensor<EngineScale, LayoutScale> &scale) {
+    scale_core(scale);
+  }
+  
+  template <
+    class EngineScaleA,
+    class LayoutScaleA,
+    class EngineScaleB,
+    class LayoutScaleB>
+  MUTLASS_DEVICE
+  void scale_residue_if_needed(const mute::Tensor<EngineScaleA, LayoutScaleA> &scaleA,
+                               const mute::Tensor<EngineScaleB, LayoutScaleB> &scaleB) {
+    scale_core(scaleA, scaleB);
+  }
+
+  MUTLASS_DEVICE
+  void div_if_needA(){
+    div_coreA();
+  }
+  
+  MUTLASS_DEVICE
+  void div_if_needB(){
+    div_coreB();
+  }
+
+  MUTLASS_DEVICE
+  void div_if_needAB(){
+    div_coreAB();
+  }
+
+  template <
+    class GTensor,
+    class RTensor>
+  MUTLASS_DEVICE
+  void copyA(GTensor &gscaleA, RTensor &rscaleA){
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(mute::filter_zeros(rscaleA)); i++)
+      mute::filter_zeros(iterative_scaleA)(i) = mute::filter_zeros(rscaleA)(i);
+    mute::copy(gscaleA, rscaleA);
+    //MUTLASS_PRAGMA_UNROLL
+    //for (int i = 0; i < size(mute::filter_zeros(rscaleA)); i++){
+    //  mute::filter_zeros(rscaleA)(i) += ElementScaleBlock(1e-16);
+    //}
+  }
+  template <
+    class GTensor,
+    class RTensor>
+  MUTLASS_DEVICE
+  void copyB(GTensor &gscaleB, RTensor &rscaleB){
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(mute::filter_zeros(rscaleB)); i++)
+      mute::filter_zeros(iterative_scaleB)(i) = mute::filter_zeros(rscaleB)(i);
+    mute::copy(gscaleB, rscaleB);
+    //MUTLASS_PRAGMA_UNROLL
+    //for (int i = 0; i < size(mute::filter_zeros(rscaleB)); i++){
+    //  mute::filter_zeros(rscaleB)(i) += ElementScaleBlock(1e-16);
+    //}
+  }
+
+  template <
+    class TensorA>
+  MUTLASS_DEVICE
+  void update_iterationA(TensorA &rscaleA){
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(mute::filter_zeros(rscaleA)); i++){
+      mute::filter_zeros(iterative_scaleA)(i) *= __frcp_rn(mute::filter_zeros(rscaleA)(i));
+    }
+  }
+
+  template <
+    class TensorB>
+  MUTLASS_DEVICE
+  void update_iterationB(TensorB &rscaleB){
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(mute::filter_zeros(rscaleB)); i++){
+      mute::filter_zeros(iterative_scaleB)(i) *= __frcp_rn(mute::filter_zeros(rscaleB)(i));
+    }
+  }
+
+  template <
+    class TensorA,
+    class TensorB>
+  MUTLASS_DEVICE
+  void update_iterationAB( TensorA &rscaleA,
+                        TensorB &rscaleB){
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(mute::filter_zeros(iterative_scaleA)); i++){
+      mute::filter_zeros(iterative_scaleA)(i) *= __frcp_rn(mute::filter_zeros(rscaleA)(i));
+    }
+    MUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(mute::filter_zeros(iterative_scaleB)); i++){
+      mute::filter_zeros(iterative_scaleB)(i) *= __frcp_rn(mute::filter_zeros(rscaleB)(i));
+    }
+  }
+};
 } // namespace mutlass::gemm::collective

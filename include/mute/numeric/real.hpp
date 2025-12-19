@@ -53,6 +53,16 @@ mul(C& c, A const& a, B const& b)
 {
   c = a * b;
 }
+
+/// Generic max
+template <class C, class A, class B>
+MUTE_HOST_DEVICE constexpr
+void
+max(C& c, A const& a, B const& b)
+{
+  c = a > b ? a : b;
+}
+
 /// Generic fused multiply-add
 template <class D, class A, class B, class C>
 MUTE_HOST_DEVICE constexpr

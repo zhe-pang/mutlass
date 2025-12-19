@@ -59,8 +59,8 @@ warpsquad_wait()
 namespace MP31::SQMMA {
 
 enum class ScaleOut {
-  One  = 0,
-  Zero = 1,
+  Zero = 0,
+  One  = 1,
 };
 
 enum class ScaleIn {

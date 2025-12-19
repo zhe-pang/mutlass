@@ -38,6 +38,7 @@
 
 #include "mutlass/detail/dependent_false.hpp"
 #include "mutlass/gemm/kernel/static_tile_scheduler.hpp"
+#include "mutlass/gemm/kernel/persistent_tile_scheduler.hpp"
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -115,6 +116,21 @@ struct TileSchedulerSelector <
   ProblemShapeType
 > {
   using Scheduler = StaticTileScheduler;
+};
+
+template <
+  class TileShape,
+  class ClusterShape,
+  class ProblemShapeType
+>
+struct TileSchedulerSelector <
+  PersistentScheduler,
+  arch::Mp31,
+  TileShape,
+  ClusterShape,
+  ProblemShapeType
+> {
+  using Scheduler = PersistentTileScheduler;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

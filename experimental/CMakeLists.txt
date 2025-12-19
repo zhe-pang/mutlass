@@ -32,7 +32,7 @@ add_custom_target(mutlass_experimental)
 add_custom_target(test_experimental)
 
 foreach(EXPERIMENTAL
-  mp31_flash_attention_fwd
+  fmha
   )
 
   add_subdirectory(${EXPERIMENTAL})

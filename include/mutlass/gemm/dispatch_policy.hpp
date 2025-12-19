@@ -48,6 +48,7 @@ using namespace mute;
 //
 struct KernelMultistage { };
 struct KernelTme { };
+struct KernelTmeWarpSpecialized { };
 
 template <
   int ScaleGranularityM = 0,
@@ -55,6 +56,13 @@ template <
   int ScaleGranularityK = 0
 >
 struct KernelTmeGroupScaledAccum : KernelTme { };
+
+template <
+  int ScaleGranularityM = 0,
+  int ScaleGranularityN = 0,
+  int ScaleGranularityK = 0
+>
+struct KernelTmeWarpSpecializedScaledAccum : KernelTmeWarpSpecialized { };
 
 // Policies for dispatch of epilogue
 struct EpilogueDefault { };
@@ -93,6 +101,16 @@ struct MainloopMp31TmeSqmma {
 
 template <
   int Stages_,
+  class KernelSchedule = KernelTmeWarpSpecialized>
+struct MainloopMp31TmeSqmmaWarpSpecialized {
+  constexpr static int Stages = Stages_;
+  using ArchTag = arch::Mp31;
+  using Schedule = KernelSchedule;
+  using ClusterShape = Shape<_1,_1,_1>;
+};
+
+template <
+  int Stages_,
   class KernelSchedule = KernelTme,
   int ScaleGranularityM = 0, // `ScaleGranularityM` specifies scaling granularity along M, while zero-value `ScaleGranularityM` indicates that scaling granularity is `size<0>(TileShape_MNK{})` along M
   int ScaleGranularityN = 0, // `ScaleGranularityN` specifies scaling granularity along N, while zero-value `ScaleGranularityN` indicates that scaling granularity is `size<1>(TileShape_MNK{})` along N
@@ -105,6 +123,19 @@ struct MainloopMp31TmeSqmmaBlockScalingFP8
     "Kernel Schedule must be the scaled accum policy.");
 };
 
+template <
+  int Stages_,
+  class KernelSchedule = KernelTmeWarpSpecialized,
+  int ScaleGranularityM = 0, // `ScaleGranularityM` specifies scaling granularity along M, while zero-value `ScaleGranularityM` indicates that scaling granularity is `size<0>(TileShape_MNK{})` along M
+  int ScaleGranularityN = 0, // `ScaleGranularityN` specifies scaling granularity along N, while zero-value `ScaleGranularityN` indicates that scaling granularity is `size<1>(TileShape_MNK{})` along N
+  int ScaleGranularityK = 0
+>
+struct MainloopMp31TmeSqmmaBlockWarpSpecializedScalingFP8
+  : MainloopMp31TmeSqmmaWarpSpecialized<Stages_, KernelSchedule> {
+  static_assert(
+    mute::is_same_v<KernelSchedule, KernelTmeWarpSpecializedScaledAccum<ScaleGranularityM, ScaleGranularityN, ScaleGranularityK>>,
+    "Kernel Schedule must be the scaled accum policy.");
+};
 //////////////////////////////////////////////////////////////////////////////
 
 } // namespace mutlass::gemm

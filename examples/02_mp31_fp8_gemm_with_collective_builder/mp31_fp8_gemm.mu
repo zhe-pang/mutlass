@@ -102,11 +102,11 @@ using ElementAccumulator  = float;                                           // 
 using ElementCompute      = float;                                           // Element type for epilogue computation
 using ArchTag             = mutlass::arch::Mp31;                             // Tag indicating the minimum MP that supports the intended feature
 using OperatorClass       = mutlass::arch::OpClassTensorOp;                  // Operator class tag
-using TileShape           = Shape<_384,_256,_64>;                            // Threadblock-level tile size
+using TileShape           = Shape<_256,_256,_64>;                            // Threadblock-level tile size
 using ClusterShape        = Shape<_1,_1,_1>;                                 // Shape of the threadblocks in a cluster
 using StageCountType      = mutlass::gemm::collective::StageCount<4>;        // Stage count
-using KernelSchedule      = mutlass::gemm::KernelTme;                        // Kernel to launch
-using EpilogueSchedule    = mutlass::epilogue::WithTme;                      // Epilogue to launch
+using KernelSchedule      = mutlass::gemm::KernelTmeWarpSpecialized;         // Kernel to launch
+using EpilogueSchedule    = mutlass::epilogue::NoSmem;                       // Epilogue to launch
 using ThreadEpilogueOp    = mutlass::epilogue::fusion::LinearCombination<ElementC,ElementCompute,ElementC,ElementCompute>;
 
 using CollectiveMainloop = typename mutlass::gemm::collective::CollectiveBuilder<
@@ -134,7 +134,8 @@ using CollectiveEpilogue = typename mutlass::epilogue::collective::CollectiveBui
 using GemmKernel = mutlass::gemm::kernel::GemmUniversal<
     Shape<int,int,int>, // Indicates ProblemShape
     CollectiveMainloop,
-    CollectiveEpilogue
+    CollectiveEpilogue,
+    mutlass::gemm::PersistentScheduler
 >;
 
 using Gemm = mutlass::gemm::device::GemmUniversalAdapter<GemmKernel>;
@@ -176,7 +177,7 @@ mutlass::DeviceAllocation<typename Gemm::EpilogueOutputOp::ElementOutput> block_
 /// Testbed utility types
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-using RasterOrderOptions = typename mutlass::gemm::kernel::detail::TileSchedulerDefaultParams::RasterOrderOptions;
+using RasterOrderOptions = typename mutlass::gemm::kernel::detail::TileSchedulerPersistParams::RasterOrderOptions;
 
 // Command line options parsing
 struct Options {
@@ -300,8 +301,8 @@ bool initialize_block(
     scope_max = Element(2);
     scope_min = Element(0);
   } else if (bits_input <= 8) {
-    scope_max = Element(2);
-    scope_min = Element(-2);
+    scope_max = Element(16);
+    scope_min = Element(-16);
   } else {
     scope_max = Element(8);
     scope_min = Element(-8);

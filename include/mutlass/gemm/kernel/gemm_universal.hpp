@@ -70,4 +70,5 @@ class GemmUniversal;
 
 #include "mutlass/gemm/kernel/mp22_gemm.hpp"
 #include "mutlass/gemm/kernel/mp31_gemm_tme.hpp"
+#include "mutlass/gemm/kernel/mp31_gemm_tme_warpspecialized.hpp"
 ////////////////////////////////////////////////////////////////////////////////

@@ -104,7 +104,8 @@ prefetch(Copy_Atom<Copy_Traits<CopyOp, CT_Args...>, CA_Args...> const& atom,
          Tensor<GEngine, GLayout>                               const& src)
 {
   if constexpr (detail::has_prefetch<CopyOp>) {
-    using Prefetch_Traits = Copy_Traits<typename CopyOp::PREFETCH, CT_Args...>;
+    // FIXME:now we only bypass tme
+    using Prefetch_Traits = Copy_Traits<MP31_TME_PREFETCH, CT_Args...>;
     using Prefetch_Atom = Copy_Atom<Prefetch_Traits, CA_Args...>;
     Prefetch_Atom prefetch_atom{atom};
     auto& dst = const_cast<Tensor<GEngine, GLayout>&>(src); // dst is ignored for prefetch atoms

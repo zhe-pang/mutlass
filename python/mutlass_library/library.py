@@ -75,50 +75,214 @@ class Underscore:
 
 class DataType(enum.Enum):
   void = enum_auto()  # primarily used to disable C tensor for epilogues
+  b1 = enum_auto()
+  u2 = enum_auto()
+  u4 = enum_auto()
+  u8 = enum_auto()
+  u16 = enum_auto()
+  u32 = enum_auto()
+  u64 = enum_auto()
+  s2 = enum_auto()
+  s4 = enum_auto()
   s8 = enum_auto()
+  s16 = enum_auto()
   s32 = enum_auto()
+  s64 = enum_auto()
+  e4m3 = enum_auto()
+  e5m2 = enum_auto()
+  f8 = enum_auto()    
+  f6 = enum_auto()    
+  f4 = enum_auto()    
+  e3m2 = enum_auto()     
+  e2m3 = enum_auto()     
+  e2m1 = enum_auto()     
+  ue8m0 = enum_auto()    
+  ue4m3 = enum_auto()    
   f16 = enum_auto()
   bf16 = enum_auto()
   f32 = enum_auto()
   tf32 = enum_auto()
+  f64 = enum_auto()
+  cf16 = enum_auto()
+  cbf16 = enum_auto()
+  cf32 = enum_auto()
+  ctf32 = enum_auto()
+  cf64 = enum_auto()
+  cs2 = enum_auto()
+  cs4 = enum_auto()
+  cs8 = enum_auto()
+  cs16 = enum_auto()
+  cs32 = enum_auto()
+  cs64 = enum_auto()
+  cu2 = enum_auto()
+  cu4 = enum_auto()
+  cu8 = enum_auto()
+  cu16 = enum_auto()
+  cu32 = enum_auto()
+  cu64 = enum_auto()
   invalid = enum_auto()
 
 #
 ShortDataTypeNames = {
   DataType.s32: 'i',
+  DataType.e4m3: 'e4m3',
+  DataType.e5m2: 'e5m2',
   DataType.f16: 'h',
   DataType.f32: 's',
+  DataType.f64: 'd',
+  DataType.cf32: 'c',
+  DataType.cf64: 'z',
+  DataType.f8: 'f8',      
+  DataType.f6: 'f6',      
+  DataType.f4: 'f4',
 }
 
 #
 DataTypeNames = {
   DataType.void: "void",
+  DataType.b1: "b1",
+  DataType.u2: "u2",
+  DataType.u4: "u4",
+  DataType.u8: "u8",
+  DataType.u16: "u16",
+  DataType.u32: "u32",
+  DataType.u64: "u64",
+  DataType.s2: "s2",
+  DataType.s4: "s4",
   DataType.s8: "s8",
+  DataType.s16: "s16",
   DataType.s32: "s32",
+  DataType.s64: "s64",
+  DataType.e4m3: 'e4m3',
+  DataType.e5m2: 'e5m2',
+  DataType.f8: 'f8',     
+  DataType.f6: 'f6',     
+  DataType.f4: 'f4',     
+  DataType.e2m3: 'e2m3',       
+  DataType.e3m2: 'e3m2',       
+  DataType.e2m1: 'e2m1',       
+  DataType.ue8m0: 'ue8m0',     
+  DataType.ue4m3: 'ue4m3',     
   DataType.f16: "f16",
   DataType.bf16: "bf16",
   DataType.f32: "f32",
   DataType.tf32: "tf32",
+  DataType.f64: "f64",
+  DataType.cf16: "cf16",
+  DataType.cbf16: "cbf16",
+  DataType.cf32: "cf32",
+  DataType.ctf32: "ctf32",
+  DataType.cf64: "cf64",
+  DataType.cu2: "cu2",
+  DataType.cu4: "cu4",
+  DataType.cu8: "cu8",
+  DataType.cu16: "cu16",
+  DataType.cu32: "cu32",
+  DataType.cu64: "cu64",
+  DataType.cs2: "cs2",
+  DataType.cs4: "cs4",
+  DataType.cs8: "cs8",
+  DataType.cs16: "cs16",
+  DataType.cs32: "cs32",
+  DataType.cs64: "cs64",
 }
 
 DataTypeTag = {
   DataType.void: "void",
+  DataType.b1: "mutlass::uint1b_t",
+  DataType.u2: "mutlass::uint2b_t",
+  DataType.u4: "mutlass::uint4b_t",
+  DataType.u8: "uint8_t",
+  DataType.u16: "uint16_t",
+  DataType.u32: "uint32_t",
+  DataType.u64: "uint64_t",
+  DataType.s2: "mutlass::int2b_t",
+  DataType.s4: "mutlass::int4b_t",
   DataType.s8: "int8_t",
+  DataType.s16: "int16_t",
   DataType.s32: "int32_t",
+  DataType.s64: "int64_t",
+  DataType.e4m3: 'mutlass::float_e4m3_t',
+  DataType.e5m2: 'mutlass::float_e5m2_t',
+  DataType.f8: 'mutlass::type_erased_dynamic_float8_t',      
+  DataType.f6: 'mutlass::type_erased_dynamic_float6_t',      
+  DataType.f4: 'mutlass::type_erased_dynamic_float4_t',      
+  DataType.e2m3: 'mutlass::float_e2m3_t',                       
+  DataType.e3m2: 'mutlass::float_e3m2_t',                       
+  DataType.e2m1: 'mutlass::float_e2m1_t',                       
+  DataType.ue8m0: 'mutlass::float_ue8m0_t',                     
+  DataType.ue4m3: 'mutlass::float_ue4m3_t',                     
   DataType.f16: "mutlass::half_t",
   DataType.bf16: "mutlass::bfloat16_t",
   DataType.f32: "float",
   DataType.tf32: "mutlass::tfloat32_t",
+  DataType.f64: "double",
+  DataType.cf16: "mutlass::complex<mutlass::half_t>",
+  DataType.cbf16: "mutlass::complex<mutlass::bfloat16_t>",
+  DataType.cf32: "mutlass::complex<float>",
+  DataType.ctf32: "mutlass::complex<mutlass::tfloat32_t>",
+  DataType.cf64: "mutlass::complex<double>",
+  DataType.cu2: "mutlass::complex<mutlass::uint2b_t>",
+  DataType.cu4: "mutlass::complex<mutlass::uint4b_t>",
+  DataType.cu8: "mutlass::complex<mutlass::uint8_t>",
+  DataType.cu16: "mutlass::complex<mutlass::uint16_t>",
+  DataType.cu32: "mutlass::complex<mutlass::uint32_t>",
+  DataType.cu64: "mutlass::complex<mutlass::uint64_t>",
+  DataType.cs2: "mutlass::complex<mutlass::int2b_t>",
+  DataType.cs4: "mutlass::complex<mutlass::int4b_t>",
+  DataType.cs8: "mutlass::complex<mutlass::int8_t>",
+  DataType.cs16: "mutlass::complex<mutlass::int16_t>",
+  DataType.cs32: "mutlass::complex<mutlass::int32_t>",
+  DataType.cs64: "mutlass::complex<mutlass::int64_t>",
 }
 
 DataTypeSize = {
   DataType.void: 0,
+  DataType.b1: 1,
+  DataType.u2: 2,
+  DataType.u4: 4,
+  DataType.u8: 8,
+  DataType.u16: 16,
+  DataType.u32: 32,
+  DataType.u64: 64,
+  DataType.s2: 2,
+  DataType.s4: 4,
   DataType.s8: 8,
+  DataType.s16: 16,
   DataType.s32: 32,
+  DataType.s64: 64,
+  DataType.e4m3: 8,
+  DataType.e5m2: 8,
+  DataType.f8: 8,
+  DataType.f6: 6,
+  DataType.f4: 4,
+  DataType.e2m3: 6,
+  DataType.e3m2: 6,
+  DataType.e2m1: 4,
+  DataType.ue8m0: 8,
+  DataType.ue4m3: 8,
   DataType.f16: 16,
   DataType.bf16: 16,
   DataType.f32: 32,
   DataType.tf32: 32,
+  DataType.f64: 64,
+  DataType.cf16: 32,
+  DataType.cbf16: 32,
+  DataType.cf32: 64,
+  DataType.ctf32: 32,
+  DataType.cf64: 128,
+  DataType.cu2: 4,
+  DataType.cu4: 8,
+  DataType.cu8: 16,
+  DataType.cu16: 32,
+  DataType.cu32: 64,
+  DataType.cu64: 128,
+  DataType.cs2: 4,
+  DataType.cs4: 8,
+  DataType.cs8: 16,
+  DataType.cs16: 32,
+  DataType.cs32: 64,
+  DataType.cs64: 128,
 }
 
 ###################################################################################################
@@ -161,11 +325,13 @@ class KernelScheduleType(enum.Enum):
   ScheduleAuto = enum_auto()
   Multistage = enum_auto()
   Tme = enum_auto()
+  TmeWarpSpecialized = enum_auto()
 #
 KernelScheduleTag = {
   KernelScheduleType.ScheduleAuto: 'mutlass::gemm::collective::KernelScheduleAuto',
   KernelScheduleType.Multistage: 'mutlass::gemm::KernelMultistage',
   KernelScheduleType.Tme: 'mutlass::gemm::KernelTme',
+  KernelScheduleType.TmeWarpSpecialized: 'mutlass::gemm::KernelTmeWarpSpecialized',
 }
 
 #
@@ -173,6 +339,7 @@ KernelScheduleSuffixes = {
   KernelScheduleType.ScheduleAuto: '',
   KernelScheduleType.Multistage: '_lsu',
   KernelScheduleType.Tme: '_tme',
+  KernelScheduleType.TmeWarpSpecialized: '_tmews',
 }
 
 class EpilogueScheduleType(enum.Enum):

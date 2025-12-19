@@ -30,7 +30,7 @@
 set(MUTLASS_UNIT_TEST_COMMON_DIR ${CMAKE_CURRENT_LIST_DIR}/common)
 
 mutlass_add_library(
-  mutlass_test_unit_infra 
+  mutlass_test_unit_infra
   common/filter_architecture.cpp
   )
 

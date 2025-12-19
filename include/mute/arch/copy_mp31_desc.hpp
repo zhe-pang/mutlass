@@ -153,6 +153,13 @@ enum class SmemSwizzleLine : uint8_t {
   B256 = 1,
 };
 
+enum class CacheHint : uint8_t {
+  CACHE_NONE    = 0,
+  CACHE_ONCE    = 1,
+  CACHE_NORMAL  = 2,
+  CACHE_PERSIST = 3,
+};
+
 
 constexpr bool operator<(SmemSwizzleGranularity sg, SmemSwizzleStride ss) {
   return static_cast<uint8_t>(sg) < (static_cast<uint8_t>(ss) + 2);
@@ -189,7 +196,6 @@ MUTE_HOST_DEVICE char const* to_string(SmemSwizzleLine const& t) {
   }
   return nullptr;
 }
-
 
 
 #if !defined(__MUSACC_RTC__)
@@ -248,6 +254,8 @@ to_MUtensorDescriptorDataType() {
 } // namespace TME
 
 using TmeDescriptor = MUtensorDescriptor;
+
+using TmeIm2ColParam = MUconvParamer;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Initiates a TensorDescriptor Prefetch

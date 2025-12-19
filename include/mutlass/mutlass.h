@@ -148,10 +148,28 @@ int canonical_warp_idx() {
   #endif // #if defined(__MUSA_ARCH__)
 }
 
+
+/// Returns a warp-uniform value indicating the canonical warp index of the calling threads.
+/// Threads within the warp must be converged.
+MUTLASS_DEVICE
+int canonical_warp_idx_sync() {
+  #if defined(__MUSA_ARCH__)
+  #if (__MUSA_ARCH__ >= 310)
+    return __shfl_sync(0xffffffff, threadIdx.x / NumThreadsPerWarp, 0);
+  #else
+    return threadIdx.x / NumThreadsPerWarpBeforeMP31;
+  #endif // #if (__MUSA_ARCH__ >= 310)
+  #else
+    return 0;
+  #endif // #if defined(__MUSA_ARCH__)
+}
+
+/// Returns a warp-uniform value indicating the canonical warp squad index of the calling threads.
+/// Threads within the warp must be converged.
 MUTLASS_DEVICE
 int canonical_warp_squad_idx() {
   #if defined(__MUSA_ARCH__)
-    return threadIdx.x / NumThreadsPerWarpSquad;
+    return __shfl_sync(0xffffffff, threadIdx.x / NumThreadsPerWarpSquad, 0);
   #else
     return 0;
   #endif // #if defined(__MUSA_ARCH__)

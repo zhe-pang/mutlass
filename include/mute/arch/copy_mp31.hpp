@@ -222,7 +222,6 @@ struct MP31_LDGSTS
   }
 };
 
-
 MUTE_HOST_DEVICE
 void
 ldgsts_wait() {

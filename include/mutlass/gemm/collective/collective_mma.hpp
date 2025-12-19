@@ -69,4 +69,6 @@ struct CollectiveMma {
 #include "mutlass/gemm/collective/mp22_mma_twostage.hpp"
 #include "mutlass/gemm/collective/mp31_mma_tme_sqmma_ss.hpp"
 #include "mutlass/gemm/collective/mp31_mma_tme_sqmma_ss_scaling.hpp"
+#include "mutlass/gemm/collective/mp31_mma_tme_sqmma_ss_warpspecialized.hpp"
+#include "mutlass/gemm/collective/mp31_mma_tme_sqmma_ss_warpspecialized_scaling.hpp"
 /////////////////////////////////////////////////////////////////////////////////////////////////

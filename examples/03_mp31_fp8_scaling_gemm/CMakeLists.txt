@@ -27,6 +27,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 mutlass_example_add_executable(
-  03_fp8_scling_gemm
+  03_fp8_scaling_gemm
   fp8_scaling_gemm.mu
 )

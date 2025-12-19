@@ -252,6 +252,67 @@ explode_tuple(Fn fn,
   return fn(get<Ia>(a)..., get<Ib>(b)..., get<Ic>(c)..., get<Id>(d)...);
 }
 
+template <class Fn,
+          class TupleA, int... Ia,
+          class TupleB, int... Ib,
+          class TupleC, int... Ic,
+          class TupleD, int... Id,
+          class TupleE, int... Ie>
+MUTE_HOST_DEVICE constexpr
+void
+explode_tuple(Fn fn,
+              TupleA&& a, int_sequence<Ia...>,
+              TupleB&& b, int_sequence<Ib...>,
+              TupleC&& c, int_sequence<Ic...>,
+              TupleD&& d, int_sequence<Id...>,
+              TupleE&& e, int_sequence<Ie...>)
+{
+  return fn(get<Ia>(a)..., get<Ib>(b)..., get<Ic>(c)..., get<Id>(d)..., get<Ie>(e)...);
+}
+
+template <class Fn,
+          class TupleA, int... Ia,
+          class TupleB, int... Ib,
+          class TupleC, int... Ic,
+          class TupleD, int... Id,
+          class TupleE, int... Ie,
+          class TupleF, int... If>
+MUTE_HOST_DEVICE constexpr
+void
+explode_tuple(Fn fn,
+              TupleA&& a, int_sequence<Ia...>,
+              TupleB&& b, int_sequence<Ib...>,
+              TupleC&& c, int_sequence<Ic...>,
+              TupleD&& d, int_sequence<Id...>,
+              TupleE&& e, int_sequence<Ie...>,
+              TupleF&& f, int_sequence<If...>)
+{
+  return fn(get<Ia>(a)..., get<Ib>(b)..., get<Ic>(c)..., get<Id>(d)..., get<Ie>(e)..., get<If>(f)...);
+}
+
+template <class Fn,
+          class TupleA, int... Ia,
+          class TupleB, int... Ib,
+          class TupleC, int... Ic,
+          class TupleD, int... Id,
+          class TupleE, int... Ie,
+          class TupleF, int... If,
+          class TupleG, int... Ig
+          >
+MUTE_HOST_DEVICE constexpr
+void
+explode_tuple(Fn fn,
+              TupleA&& a, int_sequence<Ia...>,
+              TupleB&& b, int_sequence<Ib...>,
+              TupleC&& c, int_sequence<Ic...>,
+              TupleD&& d, int_sequence<Id...>,
+              TupleE&& e, int_sequence<Ie...>,
+              TupleF&& f, int_sequence<If...>,
+              TupleG&& g, int_sequence<Ig...>)
+{
+  return fn(get<Ia>(a)..., get<Ib>(b)..., get<Ic>(c)..., get<Id>(d)..., get<Ie>(e)..., get<If>(f)..., get<Ig>(g)...);
+}
+
 } // end namespace detail
 
 } // end namespace mute
