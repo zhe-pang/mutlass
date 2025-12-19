@@ -27,9 +27,9 @@ Minimum requirements:
 
 - Architecture: Quyuan
 
-- Compiler: MCC 4.3.3
+- Compiler: MCC 4.3.4
 
-- MUSA Toolkit version: 4.3.3
+- MUSA Toolkit version: 4.3.4
 
 
 **See the [CHANGELOG](./CHANGELOG.md) for a detailed listing of releases and updates.**
